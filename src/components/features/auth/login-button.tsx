@@ -28,13 +28,19 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export function LoginButton() {
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      if ((error as FirebaseError).code !== 'auth/popup-closed-by-user') {
-        console.error('Error during sign-in:', error);
-      }
-    }
+    console.log('Attempting to sign in with Google...');
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        const user = result.user;
+        console.log('Sign-in successful. User:', user.displayName, user.email);
+      })
+      .catch((error) => {
+        if ((error as FirebaseError).code === 'auth/popup-closed-by-user') {
+          console.log('Login popup closed by user.');
+        } else {
+          console.error('Error during sign-in:', error);
+        }
+      });
   };
 
   return (

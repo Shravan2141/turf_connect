@@ -25,12 +25,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed. Current user:', user ? user.displayName : 'null');
       setUser(user);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Cleaning up auth state listener.');
+      unsubscribe();
+    }
   }, []);
 
   if (loading) {
