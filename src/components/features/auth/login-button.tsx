@@ -36,7 +36,7 @@ export function LoginButton() {
   };
 
   return (
-    <Button onClick={handleLogin} variant="accent">
+    <Button onClick={handleLogin} variant="secondary">
       <GoogleIcon className="mr-2 h-4 w-4" />
       Login
     </Button>

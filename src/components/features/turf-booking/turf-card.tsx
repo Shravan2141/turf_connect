@@ -48,10 +48,13 @@ export function TurfCard({ turf, imageUrl }: TurfCardProps) {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between items-center bg-secondary/50 p-4">
-        <div className="flex items-center font-bold text-lg">
-          <IndianRupee className="h-5 w-5 mr-1" />
-          {turf.price}
-          <span className="text-sm font-normal text-muted-foreground ml-1">/2 hrs</span>
+        <div>
+          <div className="flex items-center font-bold text-lg">
+            <IndianRupee className="h-5 w-5 mr-1" />
+            {turf.price}
+            <span className="text-sm font-normal text-muted-foreground ml-1">/2 hrs</span>
+          </div>
+          <p className="text-xs text-muted-foreground">*Price may vary depending on the time slot.</p>
         </div>
         <BookingDialog turf={turf} />
       </CardFooter>
