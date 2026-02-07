@@ -1,6 +1,6 @@
 'use client';
 
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, FirebaseError } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 
@@ -31,7 +31,9 @@ export function LoginButton() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error('Error during sign-in:', error);
+      if ((error as FirebaseError).code !== 'auth/popup-closed-by-user') {
+        console.error('Error during sign-in:', error);
+      }
     }
   };
 
