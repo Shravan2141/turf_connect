@@ -47,7 +47,8 @@ import { getPriceForSlot } from '@/lib/pricing';
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
-const ADMIN_WHATSAPP_NUMBER = '1234567890'; // IMPORTANT: Replace with a real number
+// IMPORTANT: Replace with a real number in your .env file
+const ADMIN_WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_ADMIN_WHATSAPP_NUMBER || '1234567890';
 
 export function BookingDialog({ turf, children }: { turf: Turf, children: React.ReactNode }) {
   const { user } = useAuth();
