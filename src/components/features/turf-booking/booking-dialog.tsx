@@ -48,6 +48,7 @@ const ADMIN_WHATSAPP_NUMBER = '1234567890'; // IMPORTANT: Replace with a real nu
 
 export function BookingDialog({ turf }: { turf: Turf }) {
   const [open, setOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [view, setView] = useState<'form' | 'loading' | 'recommendations' | 'confirmed'>('form');
   const [recommendations, setRecommendations] =
     useState<BookingAssistantRecommendationsOutput['recommendations'] | null>(null);
@@ -56,6 +57,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
+      date: undefined,
       timeSlot: '',
       whatsappNumber: '',
     },
@@ -73,7 +75,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
         const [startHourString] = data.timeSlot.split(':');
         const startHour = parseInt(startHourString, 10);
         
-        const preferredStartTime = new Date(data.date);
+        const preferredStartTime = new Date(data.date!);
         preferredStartTime.setHours(startHour, 0, 0, 0);
 
         const preferredEndTime = new Date(preferredStartTime);
@@ -118,6 +120,14 @@ export function BookingDialog({ turf }: { turf: Turf }) {
 
   function handleWhatsAppRedirect() {
     const data = form.getValues();
+    if (!data.date) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please select a date before confirming.',
+      });
+      return;
+    }
     const message = encodeURIComponent(
       `Hi! I'd like to request a booking for ${turf.name} on ${format(
         data.date,
@@ -170,7 +180,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
-                    <Popover>
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -189,7 +199,10 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setCalendarOpen(false);
+                          }}
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
                           }
@@ -259,7 +272,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
             <div className="text-left bg-secondary p-4 rounded-md w-full">
               <h4 className="font-bold mb-2">Booking Summary</h4>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Turf:</strong> {turf.name}</p>
-              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Date:</strong> {format(form.getValues('date'), 'PPP')}</p>
+              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Date:</strong> {form.getValues('date') ? format(form.getValues('date')!, 'PPP') : ''}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Time:</strong> {form.getValues('timeSlot')}</p>
             </div>
             <Button onClick={handleWhatsAppRedirect} className="w-full mt-4" variant="accent">
