@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format, startOfToday } from 'date-fns';
@@ -41,6 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { bookingAssistantRecommendations } from '@/ai/flows/booking-assistant-recommendations';
 import type { BookingAssistantRecommendationsOutput } from '@/ai/flows/booking-assistant-recommendations';
 import { AiRecommendations } from './ai-recommendations';
+import { addBooking, getBookedSlots } from '@/lib/booking-service';
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
@@ -53,6 +54,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
   const [recommendations, setRecommendations] =
     useState<BookingAssistantRecommendationsOutput['recommendations'] | null>(null);
   const { toast } = useToast();
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -63,14 +65,24 @@ export function BookingDialog({ turf }: { turf: Turf }) {
     },
   });
 
+  const selectedDate = form.watch('date');
+
+  useEffect(() => {
+    if (selectedDate) {
+      const slots = getBookedSlots(turf.id, selectedDate);
+      setBookedSlots(slots);
+    }
+  }, [selectedDate, turf.id, open]);
+
   async function onSubmit(data: BookingFormValues) {
     setView('loading');
     setRecommendations(null);
 
-    // Simulate checking for availability. Turf 1 from 18:00-20:00 is always "unavailable".
-    const isUnavailable = turf.id === '1' && data.timeSlot === '18:00 - 20:00';
+    // Simulate checking for availability. Turf 1 from 18:00-20:00 is always "unavailable" to demo the AI feature.
+    // This will only trigger if the slot hasn't been booked via the admin panel already.
+    const isHardcodedUnavailable = turf.id === '1' && data.timeSlot === '18:00 - 20:00' && !bookedSlots.includes(data.timeSlot);
 
-    if (isUnavailable) {
+    if (isHardcodedUnavailable) {
       try {
         const [startHourString] = data.timeSlot.split(':');
         const startHour = parseInt(startHourString, 10);
@@ -128,6 +140,15 @@ export function BookingDialog({ turf }: { turf: Turf }) {
       });
       return;
     }
+    
+    // Add booking to our "database"
+    addBooking({
+      turfId: turf.id,
+      date: format(data.date, 'yyyy-MM-dd'),
+      timeSlot: data.timeSlot,
+      whatsappNumber: data.whatsappNumber,
+    });
+    
     const message = encodeURIComponent(
       `Hi! I'd like to request a booking for ${turf.name} on ${format(
         data.date,
@@ -203,7 +224,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                             field.onChange(date);
                             setCalendarOpen(false);
                           }}
-                          disabled={(date) => date < startOfToday()}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           initialFocus
                         />
                       </PopoverContent>
@@ -227,9 +248,9 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                       </FormControl>
                       <SelectContent>
                         {timeSlots.map((slot) => (
-                          <SelectItem key={slot} value={slot}>
-                            {slot}
-                          </SelectItem>
+                           <SelectItem key={slot} value={slot} disabled={bookedSlots.includes(slot)}>
+                             {slot} {bookedSlots.includes(slot) && "(Booked)"}
+                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
