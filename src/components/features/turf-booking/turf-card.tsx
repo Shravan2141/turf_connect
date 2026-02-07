@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { MapPin, DollarSign } from 'lucide-react';
+import { MapPin, IndianRupee } from 'lucide-react';
 import { BookingDialog } from './booking-dialog';
 import { AmenityIcon } from './amenity-icon';
 
@@ -49,7 +49,7 @@ export function TurfCard({ turf, imageUrl }: TurfCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between items-center bg-secondary/50 p-4">
         <div className="flex items-center font-bold text-lg">
-          <DollarSign className="h-5 w-5 mr-1" />
+          <IndianRupee className="h-5 w-5 mr-1" />
           {turf.price}
           <span className="text-sm font-normal text-muted-foreground ml-1">/2 hrs</span>
         </div>
