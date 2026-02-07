@@ -74,15 +74,23 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
 
   useEffect(() => {
     async function fetchBookedSlots() {
-      if (selectedDate) {
+      if (selectedDate && user) {
         setLoadingSlots(true);
-        const slots = await getBookedSlots(turf.id, selectedDate);
-        setBookedSlots(slots);
-        setLoadingSlots(false);
+        try {
+          const slots = await getBookedSlots(turf.id, selectedDate);
+          setBookedSlots(slots);
+        } catch (err) {
+          console.error('Failed to fetch booked slots:', err);
+          setBookedSlots([]);
+        } finally {
+          setLoadingSlots(false);
+        }
+      } else if (selectedDate && !user) {
+        setBookedSlots([]);
       }
     }
     fetchBookedSlots();
-  }, [selectedDate, turf.id, open]);
+  }, [selectedDate, turf.id, open, user]);
 
   useEffect(() => {
     if (user && form.getValues('whatsappNumber') === '') {
@@ -224,7 +232,19 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          // Keep dialog open when interacting with Popover (calendar) or Select (time slot) - they render in portals
+          if (
+            target.closest('[data-radix-popper-content-wrapper]') ||
+            target.closest('[data-radix-select-viewport]')
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Book {turf.name}</DialogTitle>
           <DialogDescription>
@@ -254,16 +274,17 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                           <Button
                             variant={'outline'}
                             className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
+                              'w-full pl-4 text-left font-normal h-11 transition-colors',
+                              !field.value && 'text-muted-foreground',
+                              field.value && 'border-primary/30 bg-primary/5'
                             )}
                           >
                             {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarIcon className="ml-auto h-4 w-4 text-primary/70" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 overflow-hidden rounded-xl border-2 shadow-xl z-[100]" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -271,10 +292,13 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                             field.onChange(date);
                             setCalendarOpen(false);
                           }}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
+                          defaultMonth={new Date()}
+                          startMonth={new Date()}
+                          endMonth={new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)}
+                          disabled={[
+                            { before: new Date(new Date().setHours(0, 0, 0, 0)) },
+                            { after: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000) },
+                          ]}
                         />
                       </PopoverContent>
                     </Popover>
@@ -289,7 +313,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Time Slot (2 hours)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDate || loadingSlots}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={!selectedDate || loadingSlots}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={loadingSlots ? 'Loading slots...' : 'Select a time slot'} />

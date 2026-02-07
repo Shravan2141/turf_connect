@@ -9,19 +9,35 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MapPin, IndianRupee } from 'lucide-react';
-import { BookingDialog } from './booking-dialog';
 import { AmenityIcon } from './amenity-icon';
 import { buttonVariants } from '@/components/ui/button';
 
 type TurfCardProps = {
   turf: Turf;
   imageUrl: string;
+  onTurfSelect?: (turfId: string) => void;
 };
 
-export function TurfCard({ turf, imageUrl }: TurfCardProps) {
+export function TurfCard({ turf, imageUrl, onTurfSelect }: TurfCardProps) {
+  const handleClick = () => {
+    onTurfSelect?.(turf.id);
+    const quickBooking = document.getElementById('quick-booking-form');
+    quickBooking?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <BookingDialog turf={turf}>
-      <Card className="flex h-full cursor-pointer flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <Card
+      className="flex h-full cursor-pointer flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+    >
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{turf.name}</CardTitle>
           <CardDescription className="flex items-center gap-2">
@@ -61,6 +77,5 @@ export function TurfCard({ turf, imageUrl }: TurfCardProps) {
           <div className={buttonVariants({ variant: 'accent' })}>Book Now</div>
         </CardFooter>
       </Card>
-    </BookingDialog>
   );
 }

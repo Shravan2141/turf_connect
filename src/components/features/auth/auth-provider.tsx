@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
+import { isAdminEmail } from '@/lib/auth-config';
 
 type AuthContextType = {
   user: User | null;
@@ -22,20 +23,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const isAdmin = isAdminEmail(user?.email);
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('Auth state changed. Current user:', user ? user.displayName : 'null');
       setUser(user);
       setLoading(false);
     });
-
-    return () => {
-      console.log('Cleaning up auth state listener.');
-      unsubscribe();
-    }
+    return () => unsubscribe();
   }, []);
 
   if (loading) {

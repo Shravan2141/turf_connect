@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper: check if user is admin (email must exist in config/admins document)
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/config/admins) &&
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+
+    match /bookings/{bookingId} {
+      // Authenticated users can read (availability + admin list)
+      allow read: if request.auth != null;
+
+      // Authenticated users can create bookings; userId must match their auth uid
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+
+      // Users can delete their own bookings; admins can delete any booking
+      allow delete: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Users can update their own bookings; admins can update any booking
+      allow update: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Turfs - anyone can read; only admins can create, update, delete
+    match /turfs/{turfId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Config documents - only manageable via Firebase Console or Admin SDK
+    match /config/{document} {
+      allow read, write: if false;
+    }
+  }
+}

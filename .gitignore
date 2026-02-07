@@ -40,6 +40,6 @@ next-env.d.ts
 .genkit/*
 .env*
 
-# firebase
+# firebase (local debug logs)
 firebase-debug.log
 firestore-debug.log

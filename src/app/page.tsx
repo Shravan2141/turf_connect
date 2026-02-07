@@ -1,14 +1,8 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { TurfCard } from '@/components/features/turf-booking/turf-card';
-import { turfs } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { HomeBookingSection } from '@/components/features/turf-booking/home-booking-section';
 
 export default function Home() {
-  const turfImages = Object.fromEntries(
-    PlaceHolderImages.map((img) => [img.id, img.imageUrl])
-  );
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
@@ -21,17 +15,7 @@ export default function Home() {
             Browse available turfs, check amenities, and book your slot in minutes.
           </p>
         </section>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {turfs.map((turf) => (
-            <TurfCard
-              key={turf.id}
-              turf={turf}
-              imageUrl={
-                turfImages[turf.imageId] || 'https://picsum.photos/seed/placeholder/600/400'
-              }
-            />
-          ))}
-        </div>
+        <HomeBookingSection />
       </main>
       <Footer />
     </div>
