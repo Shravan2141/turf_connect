@@ -3,8 +3,8 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'TurfConnect',
-  description: 'Book your favorite turf with ease.',
+  title: 'Pavallion Sports Arena',
+  description: 'Book your favorite sports arena with ease.',
 };
 
 export default function RootLayout({

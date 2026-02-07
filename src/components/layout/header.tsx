@@ -6,7 +6,7 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-2">
           <PlayCircle className="h-8 w-8" />
-          <span className="text-xl font-bold font-headline">TurfConnect</span>
+          <span className="text-xl font-bold font-headline">Pavallion Sports Arena</span>
         </div>
         {/* Future navigation can go here */}
       </div>
