@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Trash2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Trash2 } from 'lucide-react';
 import { addBooking, deleteBooking, getAllBookings } from '@/lib/booking-service';
 import type { Booking } from '@/lib/booking-service';
 import { turfs, timeSlots } from '@/lib/data';
@@ -44,6 +44,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '../auth/auth-provider';
 
 const manualBookingSchema = z.object({
   turfId: z.string().min(1, 'Please select a turf.'),
@@ -54,33 +55,57 @@ const manualBookingSchema = z.object({
 type ManualBookingFormValues = z.infer<typeof manualBookingSchema>;
 
 export function BookingList() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const { toast } = useToast();
 
+  const fetchBookings = async () => {
+    setLoading(true);
+    const allBookings = await getAllBookings();
+    setBookings(allBookings);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    setBookings(getAllBookings());
+    fetchBookings();
   }, []);
 
-  const handleDelete = (bookingId: string) => {
-    deleteBooking(bookingId);
-    setBookings(getAllBookings());
-    toast({ title: 'Booking Deleted', description: 'The booking has been removed.' });
+  const handleDelete = async (bookingId: string) => {
+    try {
+      await deleteBooking(bookingId);
+      await fetchBookings();
+      toast({ title: 'Booking Deleted', description: 'The booking has been removed.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete booking.' });
+    }
   };
   
   const form = useForm<ManualBookingFormValues>({
     resolver: zodResolver(manualBookingSchema),
   });
   
-  function onSubmit(data: ManualBookingFormValues) {
-    addBooking({
-        ...data,
-        date: format(data.date, 'yyyy-MM-dd'),
-        whatsappNumber: 'N/A (Admin)',
-    });
-    setBookings(getAllBookings());
-    form.reset({ turfId: '', timeSlot: ''});
-    toast({ title: 'Booking Added', description: 'The new booking has been created.' });
+  async function onSubmit(data: ManualBookingFormValues) {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        return;
+    }
+    try {
+      await addBooking({
+          turfId: data.turfId,
+          date: format(data.date, 'yyyy-MM-dd'),
+          timeSlot: data.timeSlot,
+          whatsappNumber: 'N/A (Admin)',
+          userId: user.uid,
+          userName: user.displayName || 'Admin',
+      });
+      await fetchBookings();
+      form.reset({ turfId: '', timeSlot: ''});
+      toast({ title: 'Booking Added', description: 'The new booking has been created.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to add booking.' });
+    }
   }
 
   return (
@@ -99,12 +124,18 @@ export function BookingList() {
                             <TableHead>Turf</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Time Slot</TableHead>
-                            <TableHead>Contact</TableHead>
+                            <TableHead>Booked By</TableHead>
                             <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {bookings.length > 0 ? (
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center h-24">
+                                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : bookings.length > 0 ? (
                                 bookings.map((booking) => {
                                     const turf = turfs.find(t => t.id === booking.turfId);
                                     return (
@@ -112,7 +143,7 @@ export function BookingList() {
                                         <TableCell className="font-medium">{turf?.name || 'Unknown'}</TableCell>
                                         <TableCell>{format(new Date(booking.date.replace(/-/g, '/')), 'PPP')}</TableCell>
                                         <TableCell>{booking.timeSlot}</TableCell>
-                                        <TableCell>{booking.whatsappNumber}</TableCell>
+                                        <TableCell>{booking.userName || booking.whatsappNumber}</TableCell>
                                         <TableCell className="text-right">
                                         <Button
                                             variant="ghost"

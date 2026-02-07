@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { CalendarIcon, Loader2, PartyPopper, CheckCircle } from 'lucide-react';
 import { bookingSchema } from '@/lib/schemas';
 import type { z } from 'zod';
@@ -58,6 +58,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
     useState<BookingAssistantRecommendationsOutput['recommendations'] | null>(null);
   const { toast } = useToast();
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -71,17 +72,22 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
   const selectedDate = form.watch('date');
 
   useEffect(() => {
-    if (selectedDate) {
-      const slots = getBookedSlots(turf.id, selectedDate);
-      setBookedSlots(slots);
+    async function fetchBookedSlots() {
+      if (selectedDate) {
+        setLoadingSlots(true);
+        const slots = await getBookedSlots(turf.id, selectedDate);
+        setBookedSlots(slots);
+        setLoadingSlots(false);
+      }
     }
+    fetchBookedSlots();
   }, [selectedDate, turf.id, open]);
 
   useEffect(() => {
     if (user && form.getValues('whatsappNumber') === '') {
         form.setValue('whatsappNumber', user.phoneNumber || '');
     }
-  }, [user, form]);
+  }, [user, form, open]);
 
 
   async function onSubmit(data: BookingFormValues) {
@@ -146,40 +152,52 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
     setView('confirmed');
   }
 
-  function handleWhatsAppRedirect() {
+  async function handleWhatsAppRedirect() {
     const data = form.getValues();
-    if (!data.date) {
+    if (!data.date || !user) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Please select a date before confirming.',
+        description: 'Please select a date and be logged in before confirming.',
       });
       return;
     }
     
-    const price = getPriceForSlot(turf, data.timeSlot);
+    const price = getPriceForSlot(turf, data.timeSlot, data.date);
 
-    addBooking({
-      turfId: turf.id,
-      date: format(data.date, 'yyyy-MM-dd'),
-      timeSlot: data.timeSlot,
-      whatsappNumber: data.whatsappNumber,
-    });
-    
-    const message = encodeURIComponent(
-      `Hi! I'd like to request a booking for ${turf.name} on ${format(
-        data.date,
-        'PPP'
-      )} from ${data.timeSlot} for ₹${price}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
-    );
-    const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
-    window.open(whatsappUrl, '_blank');
+    try {
+      await addBooking({
+        turfId: turf.id,
+        date: format(data.date, 'yyyy-MM-dd'),
+        timeSlot: data.timeSlot,
+        whatsappNumber: data.whatsappNumber,
+        userId: user.uid,
+        userName: user.displayName || 'Unknown User'
+      });
+      
+      const message = encodeURIComponent(
+        `Hi! I'd like to request a booking for ${turf.name} on ${format(
+          data.date,
+          'PPP'
+        )} from ${data.timeSlot} for ₹${price}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
+      );
+      const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
+      window.open(whatsappUrl, '_blank');
+      resetAndClose();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Booking Failed',
+        description: 'Could not save your booking. Please try again.',
+      });
+    }
   }
   
   function resetAndClose() {
     form.reset();
     setView('form');
     setRecommendations(null);
+    setBookedSlots([]);
     setOpen(false);
   }
 
@@ -270,19 +288,20 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Time Slot (2 hours)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDate || loadingSlots}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a time slot" />
+                          <SelectValue placeholder={loadingSlots ? 'Loading slots...' : 'Select a time slot'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {timeSlots.map((slot) => {
-                          const price = getPriceForSlot(turf, slot);
+                          const isBooked = bookedSlots.includes(slot);
+                          const price = getPriceForSlot(turf, slot, selectedDate!);
                           return (
-                           <SelectItem key={slot} value={slot} disabled={bookedSlots.includes(slot)}>
+                           <SelectItem key={slot} value={slot} disabled={isBooked}>
                              {`${slot} - ₹${price}`}
-                             {bookedSlots.includes(slot) && " (Booked)"}
+                             {isBooked && " (Booked)"}
                            </SelectItem>
                           );
                         })}
@@ -327,7 +346,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Turf:</strong> {turf.name}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Date:</strong> {form.getValues('date') ? format(form.getValues('date')!, 'PPP') : ''}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Time:</strong> {form.getValues('timeSlot')}</p>
-              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Price:</strong> ₹{getPriceForSlot(turf, form.getValues('timeSlot'))}</p>
+              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Price:</strong> ₹{getPriceForSlot(turf, form.getValues('timeSlot'), form.getValues('date'))}</p>
             </div>
             <Button onClick={handleWhatsAppRedirect} className="w-full mt-4" variant="accent">
               Confirm on WhatsApp
