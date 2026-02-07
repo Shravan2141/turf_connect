@@ -15,7 +15,9 @@ import * as path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const ADMIN_EMAILS = ['shravanfybscit111@gmail.com'];
+// Admin emails from env (comma-separated). Must match NEXT_PUBLIC_ADMIN_EMAIL in .env.
+const raw = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.trim();
+const ADMIN_EMAILS = raw ? raw.split(',').map((e) => e.trim()).filter(Boolean) : [];
 
 const DEFAULT_TURFS = [
   {
@@ -59,6 +61,14 @@ async function main() {
   // Initialize Firebase Admin only if not already initialized
   if (!admin.apps.length) {
     admin.initializeApp({ projectId });
+  }
+
+  if (ADMIN_EMAILS.length === 0) {
+    console.error(
+      'Missing NEXT_PUBLIC_ADMIN_EMAIL in .env. Set it to your admin email (comma-separated for multiple), e.g.:\n' +
+        '  NEXT_PUBLIC_ADMIN_EMAIL="admin@example.com"'
+    );
+    process.exit(1);
   }
 
   const db = admin.firestore();

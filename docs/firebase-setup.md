@@ -30,7 +30,7 @@ NEXT_PUBLIC_ADMIN_EMAIL="admin1@example.com,admin2@example.com"
    ```
 3. Run: `npm run seed`
 
-This creates `config/admins` with `shravanfybscit111@gmail.com` and seeds the default turfs (if the turfs collection is empty).
+This creates `config/admins` using the emails from `NEXT_PUBLIC_ADMIN_EMAIL` in your `.env` and seeds the default turfs (if the turfs collection is empty).
 
 **Option B – Manual setup in Firebase Console:**
 
@@ -38,11 +38,11 @@ This creates `config/admins` with `shravanfybscit111@gmail.com` and seeds the de
 2. Click "Start collection" (or add to existing)
 3. Collection ID: `config`
 4. Document ID: `admins`
-5. Add field: `emails` (type: array), value: `["shravanfybscit111@gmail.com"]`
+5. Add field: `emails` (type: array), value: `["admin@example.com"]` (use your own admin email)
 
 ```json
 {
-  "emails": ["shravanfybscit111@gmail.com"]
+  "emails": ["admin@example.com"]
 }
 ```
 

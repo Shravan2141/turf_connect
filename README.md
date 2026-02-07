@@ -73,7 +73,7 @@ This project uses Firebase for authentication (Google Sign-In) and Firestore as 
 5.  Under Authentication settings, add `localhost` to the list of **Authorized domains**.
 6.  Go to the **Firestore Database** section and create a new database in production mode.
 7.  **Deploy Firestore rules**: Copy the contents of `firestore.rules` in this project into Firestore → Rules in the Firebase Console, then publish.
-8.  **Set up admin access**: Either run `npm run seed` (see [docs/firebase-setup.md](docs/firebase-setup.md)) or manually create a document at `config/admins` with a field `emails` (array of strings), e.g. `["shravanfybscit111@gmail.com"]`. This must match `NEXT_PUBLIC_ADMIN_EMAIL` in your `.env`.
+8.  **Set up admin access**: Either run `npm run seed` (see [docs/firebase-setup.md](docs/firebase-setup.md)) or manually create a document at `config/admins` with a field `emails` (array of strings), e.g. `["admin@example.com"]`. This must match `NEXT_PUBLIC_ADMIN_EMAIL` in your `.env`.
 
 ## Available Scripts
 
