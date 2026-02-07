@@ -4,7 +4,7 @@ export const turfs: Turf[] = [
   {
     id: '1',
     name: 'Pavallion Sports Arena T1',
-    location: 'Mira Bhayander',
+    location: 'Mira Bhayandar',
     price: 1000,
     amenities: ['Parking', 'Floodlights', 'Washroom', 'Equipments'],
     imageId: 'turf-1',
@@ -12,7 +12,7 @@ export const turfs: Turf[] = [
   {
     id: '2',
     name: 'Pavallion Sports Arena T2',
-    location: 'Mira Bhayander',
+    location: 'Mira Bhayandar',
     price: 1000,
     amenities: ['Parking', 'Floodlights', 'Washroom', 'Equipments'],
     imageId: 'turf-2',
@@ -20,7 +20,7 @@ export const turfs: Turf[] = [
   {
     id: '3',
     name: 'Pavallion Sports Arena T3',
-    location: 'Mira Bhayander',
+    location: 'Mira Bhayandar',
     price: 1000,
     amenities: ['Parking', 'Floodlights', 'Washroom', 'Equipments'],
     imageId: 'turf-3',
