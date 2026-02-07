@@ -274,7 +274,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                           <Button
                             variant={'outline'}
                             className={cn(
-                              'w-full pl-4 text-left font-normal h-11 transition-colors',
+                              'w-full pl-4 text-left font-normal h-11 transition-colors pointer-events-auto',
                               !field.value && 'text-muted-foreground',
                               field.value && 'border-primary/30 bg-primary/5'
                             )}
@@ -284,7 +284,12 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 overflow-hidden rounded-xl border-2 shadow-xl z-[100]" align="start">
+                      <PopoverContent 
+                        className="w-auto p-0 overflow-visible rounded-xl border-2 shadow-2xl z-[9999] pointer-events-auto" 
+                        align="start"
+                        side="bottom"
+                        sideOffset={5}
+                      >
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -295,10 +300,13 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                           defaultMonth={new Date()}
                           startMonth={new Date()}
                           endMonth={new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)}
-                          disabled={[
-                            { before: new Date(new Date().setHours(0, 0, 0, 0)) },
-                            { after: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000) },
-                          ]}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const maxDate = new Date();
+                            maxDate.setDate(maxDate.getDate() + 180);
+                            return date < today || date > maxDate;
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
@@ -313,16 +321,20 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Time Slot (2 hours)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={!selectedDate || loadingSlots}>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!selectedDate || loadingSlots}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={loadingSlots ? 'Loading slots...' : 'Select a time slot'} />
+                        <SelectTrigger className={!selectedDate ? 'text-muted-foreground' : ''}>
+                          <SelectValue placeholder={
+                            !selectedDate ? 'Select a date first' :
+                            loadingSlots ? 'Loading slots...' : 
+                            'Select a time slot'
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {timeSlots.map((slot) => {
+                        {selectedDate && timeSlots.map((slot) => {
                           const isBooked = bookedSlots.includes(slot);
-                          const price = getPriceForSlot(turf, slot, selectedDate!);
+                          const price = getPriceForSlot(turf, slot, selectedDate);
                           return (
                            <SelectItem key={slot} value={slot} disabled={isBooked}>
                              {`${slot} - ₹${price}`}
@@ -332,6 +344,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
                         })}
                       </SelectContent>
                     </Select>
+                    {!selectedDate && <p className="text-sm text-destructive mt-1">Please select a date first</p>}
                     <FormMessage />
                   </FormItem>
                 )}

@@ -21,8 +21,6 @@ type TurfCardProps = {
 export function TurfCard({ turf, imageUrl, onTurfSelect }: TurfCardProps) {
   const handleClick = () => {
     onTurfSelect?.(turf.id);
-    const quickBooking = document.getElementById('quick-booking-form');
-    quickBooking?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (

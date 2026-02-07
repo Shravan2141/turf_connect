@@ -1,20 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { QuickBookingForm } from './quick-booking-form';
+import { BookingFormDialog } from './booking-form-dialog';
 import { TurfGrid } from './turf-grid';
 
 export function HomeBookingSection() {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTurfId, setSelectedTurfId] = useState<string | null>(null);
+
+  const handleTurfSelect = (turfId: string) => {
+    setSelectedTurfId(turfId);
+    setDialogOpen(true);
+  };
 
   return (
     <>
-      <section className="mb-12 max-w-md">
-        <QuickBookingForm selectedTurfId={selectedTurfId} />
-      </section>
+      <BookingFormDialog 
+        open={dialogOpen} 
+        onOpenChange={setDialogOpen}
+        selectedTurfId={selectedTurfId}
+      />
       <section>
         <h2 className="text-xl font-semibold mb-4">Available Turfs</h2>
-        <TurfGrid onTurfSelect={setSelectedTurfId} />
+        <TurfGrid onTurfSelect={handleTurfSelect} />
       </section>
     </>
   );

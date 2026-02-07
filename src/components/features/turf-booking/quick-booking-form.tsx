@@ -40,26 +40,46 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/features/auth/auth-provider';
 import { getPriceForSlot } from '@/lib/pricing';
+import { bookingSchema } from '@/lib/schemas';
 
 const ADMIN_WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_ADMIN_WHATSAPP_NUMBER || '1234567890';
 
 const quickBookingSchema = z.object({
   turfId: z.string().min(1, 'Please select a turf.'),
-  date: z.date({ required_error: 'A date is required.' }),
-  timeSlot: z.string().min(1, 'Please select a time slot.'),
+  date: z.date({
+    required_error: 'A date is required.',
+    invalid_type_error: 'Please select a valid date.',
+  }).refine((date) => {
+    // Ensure date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
+  }, 'Date cannot be in the past.'),
+  timeSlot: z.string({ required_error: 'Please select a time slot.' }).min(1, 'Please select a time slot.'),
   whatsappNumber: z
     .string()
     .min(10, 'Please enter a valid WhatsApp number.')
-    .refine((val) => /^\+?[1-9]\d{9,14}$/.test(val?.replace(/\s/g, '') ?? ''), 'Invalid phone number format.'),
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format.'),
+}).refine((data) => {
+  // Ensure timeSlot is only selected if date is selected
+  if (!data.date && data.timeSlot) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Please select a date before choosing a time slot.',
+  path: ['timeSlot'],
 });
 
 type QuickBookingFormValues = z.infer<typeof quickBookingSchema>;
 
 type QuickBookingFormProps = {
   selectedTurfId?: string | null;
+  onBookingComplete?: () => void;
+  compact?: boolean;
 };
 
-export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBookingFormProps) {
+export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingComplete, compact }: QuickBookingFormProps) {
   const { user } = useAuth();
   const [turfs, setTurfs] = useState<Turf[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +175,9 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
 
       form.reset({ turfId: '', date: undefined, timeSlot: '', whatsappNumber: user.phoneNumber || '' });
       toast({ title: 'Booking Requested', description: 'Proceed to WhatsApp to confirm with the admin.' });
+      
+      // Close dialog after successful booking
+      onBookingComplete?.();
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -181,16 +204,28 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
   }
 
   return (
-    <Card id="quick-booking-form">
-      <CardHeader>
-        <CardTitle>Book a Slot</CardTitle>
-        <CardDescription>
-          Select turf, date, and time to send a booking request. You must be logged in to book.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <>
+      {!compact && (
+        <Card id="quick-booking-form">
+          <CardHeader>
+            <CardTitle>Book a Slot</CardTitle>
+            <CardDescription>
+              Select turf, date, and time to send a booking request. You must be logged in to book.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderForm()}
+          </CardContent>
+        </Card>
+      )}
+      {compact && renderForm()}
+    </>
+  );
+
+  function renderForm() {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="turfId"
@@ -227,7 +262,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
                         <Button
                           variant="outline"
                           className={cn(
-                            'w-full pl-4 text-left font-normal h-11 transition-colors',
+                            'w-full pl-4 text-left font-normal h-11 transition-colors pointer-events-auto',
                             !field.value && 'text-muted-foreground',
                             field.value && 'border-primary/30 bg-primary/5'
                           )}
@@ -237,7 +272,12 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 overflow-hidden rounded-xl border-2 shadow-xl z-[100]" align="start">
+                    <PopoverContent 
+                      className="w-auto p-0 overflow-visible rounded-xl border-2 shadow-2xl z-[9999] pointer-events-auto" 
+                      align="start"
+                      side="bottom"
+                      sideOffset={5}
+                    >
                       <Calendar
                         mode="single"
                         selected={field.value}
@@ -248,10 +288,13 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
                         defaultMonth={new Date()}
                         startMonth={new Date()}
                         endMonth={new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)}
-                        disabled={[
-                          { before: new Date(new Date().setHours(0, 0, 0, 0)) },
-                          { after: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000) },
-                        ]}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const maxDate = new Date();
+                          maxDate.setDate(maxDate.getDate() + 180);
+                          return date < today || date > maxDate;
+                        }}
                       />
                     </PopoverContent>
                   </Popover>
@@ -267,16 +310,20 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
                   <FormLabel>Time Slot (2 hours)</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value || undefined}
+                    value={field.value || ''}
                     disabled={!selectedDate || loadingSlots}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingSlots ? 'Loading slots...' : 'Select a time slot'} />
+                      <SelectTrigger className={!selectedDate ? 'text-muted-foreground' : ''}>
+                        <SelectValue placeholder={
+                          !selectedDate ? 'Select a date and turf first' :
+                          loadingSlots ? 'Loading slots...' : 
+                          'Select a time slot'
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {timeSlots.map((slot) => {
+                      {selectedDate && selectedTurfId && timeSlots.map((slot) => {
                         const turf = turfs.find((t) => t.id === selectedTurfId);
                         const isBooked = bookedSlots.includes(slot);
                         const price = turf && selectedDate ? getPriceForSlot(turf, slot, selectedDate) : 0;
@@ -289,6 +336,8 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
                       })}
                     </SelectContent>
                   </Select>
+                  {!selectedDate && <p className="text-sm text-destructive mt-1">Please select a date first</p>}
+                  {selectedDate && !selectedTurfId && <p className="text-sm text-destructive mt-1">Please select a turf first</p>}
                   <FormMessage />
                 </FormItem>
               )}
@@ -332,7 +381,6 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId }: QuickBooking
             </Button>
           </form>
         </Form>
-      </CardContent>
-    </Card>
-  );
+      );
+    }
 }
