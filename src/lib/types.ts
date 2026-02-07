@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 
 export type Amenity = {
-  name: 'Floodlights' | 'Washroom' | 'Parking' | 'Gallery';
+  name: 'Floodlights' | 'Washroom' | 'Parking' | 'Equipments';
   icon: LucideIcon;
 };
 

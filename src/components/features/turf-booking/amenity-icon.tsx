@@ -1,14 +1,14 @@
 'use client';
 
 import type { Amenity } from '@/lib/types';
-import { Car, Lightbulb, Users, PersonStanding } from 'lucide-react';
+import { Car, Lightbulb, PersonStanding, Dumbbell } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 const iconMap: Record<Amenity['name'], React.ElementType> = {
   Floodlights: Lightbulb,
   Washroom: PersonStanding,
   Parking: Car,
-  Gallery: Users,
+  Equipments: Dumbbell,
 };
 
 type AmenityIconProps = ComponentProps<'div'> & {
