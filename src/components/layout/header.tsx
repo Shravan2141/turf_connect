@@ -2,12 +2,12 @@
 
 import { PlayCircle, Shield } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/components/features/auth/auth-provider';
+import { LoginButton } from '@/components/features/auth/login-button';
+import { UserAvatar } from '@/components/features/auth/user-avatar';
 
 export function Header() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.get('admin') === 'true' || pathname.startsWith('/admin');
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="bg-primary text-primary-foreground shadow-md">
@@ -16,8 +16,8 @@ export function Header() {
           <PlayCircle className="h-8 w-8" />
           <span className="text-xl font-bold font-headline">Pavallion Sports Arena</span>
         </Link>
-        <nav>
-          {isAdmin && (
+        <nav className="flex items-center gap-4">
+          {user && isAdmin && (
             <Link
               href="/admin"
               className="flex items-center gap-2 hover:text-accent transition-colors"
@@ -26,6 +26,7 @@ export function Header() {
               <span className="text-sm font-medium">Admin</span>
             </Link>
           )}
+          {user ? <UserAvatar /> : <LoginButton />}
         </nav>
       </div>
     </header>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, startOfToday } from 'date-fns';
+import { format } from 'date-fns';
 import { CalendarIcon, Loader2, PartyPopper, CheckCircle } from 'lucide-react';
 import { bookingSchema } from '@/lib/schemas';
 import type { z } from 'zod';
@@ -42,12 +42,14 @@ import { bookingAssistantRecommendations } from '@/ai/flows/booking-assistant-re
 import type { BookingAssistantRecommendationsOutput } from '@/ai/flows/booking-assistant-recommendations';
 import { AiRecommendations } from './ai-recommendations';
 import { addBooking, getBookedSlots } from '@/lib/booking-service';
+import { useAuth } from '@/components/features/auth/auth-provider';
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const ADMIN_WHATSAPP_NUMBER = '1234567890'; // IMPORTANT: Replace with a real number
 
 export function BookingDialog({ turf }: { turf: Turf }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [view, setView] = useState<'form' | 'loading' | 'recommendations' | 'confirmed'>('form');
@@ -74,12 +76,26 @@ export function BookingDialog({ turf }: { turf: Turf }) {
     }
   }, [selectedDate, turf.id, open]);
 
+  useEffect(() => {
+    if (user && form.getValues('whatsappNumber') === '') {
+        form.setValue('whatsappNumber', user.phoneNumber || '');
+    }
+  }, [user, form]);
+
+
   async function onSubmit(data: BookingFormValues) {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'Please log in to book a slot.',
+      });
+      return;
+    }
+
     setView('loading');
     setRecommendations(null);
 
-    // Simulate checking for availability. Turf 1 from 18:00-20:00 is always "unavailable" to demo the AI feature.
-    // This will only trigger if the slot hasn't been booked via the admin panel already.
     const isHardcodedUnavailable = turf.id === '1' && data.timeSlot === '18:00 - 20:00' && !bookedSlots.includes(data.timeSlot);
 
     if (isHardcodedUnavailable) {
@@ -97,7 +113,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
           turfId: turf.id,
           preferredStartTime: preferredStartTime.toISOString(),
           preferredEndTime: preferredEndTime.toISOString(),
-          userId: 'user-123', // In a real app, this would be the logged-in user's ID
+          userId: user.uid,
         });
         
         if (result.recommendations && result.recommendations.length > 0) {
@@ -115,8 +131,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
         setView('form');
       }
     } else {
-      // Slot is available
-      setTimeout(() => setView('confirmed'), 500); // Simulate a short delay
+      setTimeout(() => setView('confirmed'), 500);
     }
   }
 
@@ -141,7 +156,6 @@ export function BookingDialog({ turf }: { turf: Turf }) {
       return;
     }
     
-    // Add booking to our "database"
     addBooking({
       turfId: turf.id,
       date: format(data.date, 'yyyy-MM-dd'),
@@ -166,14 +180,25 @@ export function BookingDialog({ turf }: { turf: Turf }) {
     setOpen(false);
   }
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      if (user) {
+        setOpen(true);
+      } else {
+        toast({
+          title: 'Login Required',
+          description: 'Please log in to book a turf.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      resetAndClose();
+    }
+  };
+
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          resetAndClose();
-        } else {
-          setOpen(true);
-        }
-      }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="accent" className="w-full sm:w-auto">Book Now</Button>
       </DialogTrigger>
@@ -224,7 +249,9 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                             field.onChange(date);
                             setCalendarOpen(false);
                           }}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           initialFocus
                         />
                       </PopoverContent>
