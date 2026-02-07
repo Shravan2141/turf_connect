@@ -49,7 +49,7 @@ type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const ADMIN_WHATSAPP_NUMBER = '1234567890'; // IMPORTANT: Replace with a real number
 
-export function BookingDialog({ turf }: { turf: Turf }) {
+export function BookingDialog({ turf, children }: { turf: Turf, children: React.ReactNode }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -203,7 +203,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="accent" className="w-full sm:w-auto">Book Now</Button>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

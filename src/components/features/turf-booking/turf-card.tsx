@@ -11,6 +11,7 @@ import {
 import { MapPin, IndianRupee } from 'lucide-react';
 import { BookingDialog } from './booking-dialog';
 import { AmenityIcon } from './amenity-icon';
+import { buttonVariants } from '@/components/ui/button';
 
 type TurfCardProps = {
   turf: Turf;
@@ -19,45 +20,47 @@ type TurfCardProps = {
 
 export function TurfCard({ turf, imageUrl }: TurfCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">{turf.name}</CardTitle>
-        <CardDescription className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          {turf.location}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-4">
-        <div className="aspect-video overflow-hidden rounded-md">
-          <Image
-            src={imageUrl}
-            alt={turf.name}
-            width={600}
-            height={400}
-            className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
-            data-ai-hint="soccer field"
-          />
-        </div>
-        <div>
-          <h4 className="font-semibold mb-2">Amenities</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {turf.amenities.map((amenity) => (
-              <AmenityIcon key={amenity} amenity={amenity} />
-            ))}
+    <BookingDialog turf={turf}>
+      <Card className="flex h-full cursor-pointer flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">{turf.name}</CardTitle>
+          <CardDescription className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {turf.location}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-4">
+          <div className="aspect-video overflow-hidden rounded-md">
+            <Image
+              src={imageUrl}
+              alt={turf.name}
+              width={600}
+              height={400}
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+              data-ai-hint="soccer field"
+            />
           </div>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between items-center bg-secondary/50 p-4">
-        <div>
-          <div className="flex items-center font-bold text-lg">
-            <IndianRupee className="h-5 w-5 mr-1" />
-            {turf.price}
-            <span className="text-sm font-normal text-muted-foreground ml-1">/2 hrs</span>
+          <div>
+            <h4 className="mb-2 font-semibold">Amenities</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {turf.amenities.map((amenity) => (
+                <AmenityIcon key={amenity} amenity={amenity} />
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">*Price may vary depending on the time slot.</p>
-        </div>
-        <BookingDialog turf={turf} />
-      </CardFooter>
-    </Card>
+        </CardContent>
+        <CardFooter className="mt-auto flex items-center justify-between bg-secondary/50 p-4">
+          <div>
+            <div className="flex items-center text-lg font-bold">
+              <IndianRupee className="mr-1 h-5 w-5" />
+              {turf.price}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">/2 hrs</span>
+            </div>
+            <p className="text-xs text-muted-foreground">*Price may vary depending on the time slot.</p>
+          </div>
+          <div className={buttonVariants({ variant: 'accent' })}>Book Now</div>
+        </CardFooter>
+      </Card>
+    </BookingDialog>
   );
 }
