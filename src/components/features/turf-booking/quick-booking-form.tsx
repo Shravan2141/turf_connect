@@ -164,6 +164,8 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
         whatsappNumber: data.whatsappNumber.replace(/\s/g, '').trim(),
         userId: user.uid,
         userName: user.displayName || 'Unknown User',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
       });
 
       const price = getPriceForSlot(turf, data.timeSlot, data.date);

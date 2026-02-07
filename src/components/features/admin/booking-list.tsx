@@ -122,10 +122,12 @@ export function BookingList() {
           whatsappNumber: data.whatsappNumber?.trim() || 'N/A (Admin)',
           userId: user.uid,
           userName: user.displayName || 'Admin',
+          status: 'confirmed',
+          createdAt: new Date().toISOString(),
       });
       await fetchBookings();
       form.reset({ turfId: '', date: undefined, timeSlot: '', whatsappNumber: '' });
-      toast({ title: 'Booking Added', description: 'The new booking has been created.' });
+      toast({ title: 'Booking Added', description: 'The new booking has been created and confirmed.' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to add booking.' });
     }
@@ -161,7 +163,7 @@ export function BookingList() {
                                     </TableCell>
                                 </TableRow>
                             ) : bookings.length > 0 ? (
-                                bookings.map((booking) => {
+                                bookings.filter(b => b.status === 'confirmed').map((booking) => {
                                     const turf = turfs.find(t => t.id === booking.turfId);
                                     const bookingDate = new Date(booking.date.replace(/-/g, '/'));
                                     const price = turf ? getPriceForSlot(turf, booking.timeSlot, bookingDate) : 0;

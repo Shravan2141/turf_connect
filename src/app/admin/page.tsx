@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { BookingList } from '@/components/features/admin/booking-list';
+import { PendingBookings } from '@/components/features/admin/pending-bookings';
 import { TurfManagement } from '@/components/features/admin/turf-management';
 import { useAuth } from '@/components/features/auth/auth-provider';
 import { useRouter } from 'next/navigation';
@@ -57,8 +58,12 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold mb-4">Turf Management</h2>
           <TurfManagement />
         </section>
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Pending Booking Requests</h2>
+          <PendingBookings />
+        </section>
         <section>
-          <h2 className="text-xl font-semibold mb-4">Bookings</h2>
+          <h2 className="text-xl font-semibold mb-4">Confirmed Bookings</h2>
           <BookingList />
         </section>
       </main>

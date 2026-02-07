@@ -8,6 +8,7 @@ import {
   getDocs, 
   addDoc, 
   deleteDoc, 
+  updateDoc,
   query, 
   where,
   doc
@@ -21,6 +22,8 @@ export type Booking = {
   whatsappNumber: string;
   userId: string;
   userName: string;
+  status?: 'pending' | 'confirmed'; // pending by default, admin changes to confirmed
+  createdAt?: string;
 };
 
 const db = getFirestore(app);
@@ -70,6 +73,17 @@ export const deleteBooking = async (bookingId: string): Promise<void> => {
     await deleteDoc(bookingDoc);
   } catch (error) {
     console.error("Error deleting booking: ", error);
+    throw error;
+  }
+};
+
+// Update booking status
+export const updateBookingStatus = async (bookingId: string, status: 'pending' | 'confirmed'): Promise<void> => {
+  try {
+    const bookingDoc = doc(db, 'bookings', bookingId);
+    await updateDoc(bookingDoc, { status });
+  } catch (error) {
+    console.error("Error updating booking status: ", error);
     throw error;
   }
 };
