@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import { format, startOfToday } from 'date-fns';
 import { CalendarIcon, Loader2, PartyPopper, CheckCircle } from 'lucide-react';
 import { bookingSchema } from '@/lib/schemas';
 import type { z } from 'zod';
@@ -203,9 +203,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                             field.onChange(date);
                             setCalendarOpen(false);
                           }}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
+                          disabled={(date) => date < startOfToday()}
                           initialFocus
                         />
                       </PopoverContent>
