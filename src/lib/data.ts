@@ -13,7 +13,7 @@ export const turfs: Turf[] = [
     id: '2',
     name: 'Pavallion Sports Arena T2',
     location: 'Mira Bhayander',
-    price: 1000,
+    price: 1800,
     amenities: ['Parking', 'Floodlights', 'Washroom', 'Equipments'],
     imageId: 'turf-2',
   },

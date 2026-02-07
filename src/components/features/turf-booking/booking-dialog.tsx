@@ -43,6 +43,7 @@ import type { BookingAssistantRecommendationsOutput } from '@/ai/flows/booking-a
 import { AiRecommendations } from './ai-recommendations';
 import { addBooking, getBookedSlots } from '@/lib/booking-service';
 import { useAuth } from '@/components/features/auth/auth-provider';
+import { getPriceForSlot } from '@/lib/pricing';
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
@@ -156,6 +157,8 @@ export function BookingDialog({ turf }: { turf: Turf }) {
       return;
     }
     
+    const price = getPriceForSlot(turf, data.timeSlot);
+
     addBooking({
       turfId: turf.id,
       date: format(data.date, 'yyyy-MM-dd'),
@@ -167,7 +170,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
       `Hi! I'd like to request a booking for ${turf.name} on ${format(
         data.date,
         'PPP'
-      )} from ${data.timeSlot}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
+      )} from ${data.timeSlot} for ₹${price}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
     );
     const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
     window.open(whatsappUrl, '_blank');
@@ -274,11 +277,15 @@ export function BookingDialog({ turf }: { turf: Turf }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {timeSlots.map((slot) => (
+                        {timeSlots.map((slot) => {
+                          const price = getPriceForSlot(turf, slot);
+                          return (
                            <SelectItem key={slot} value={slot} disabled={bookedSlots.includes(slot)}>
-                             {slot} {bookedSlots.includes(slot) && "(Booked)"}
+                             {`${slot} - ₹${price}`}
+                             {bookedSlots.includes(slot) && " (Booked)"}
                            </SelectItem>
-                        ))}
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -320,6 +327,7 @@ export function BookingDialog({ turf }: { turf: Turf }) {
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Turf:</strong> {turf.name}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Date:</strong> {form.getValues('date') ? format(form.getValues('date')!, 'PPP') : ''}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Time:</strong> {form.getValues('timeSlot')}</p>
+              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Price:</strong> ₹{getPriceForSlot(turf, form.getValues('timeSlot'))}</p>
             </div>
             <Button onClick={handleWhatsAppRedirect} className="w-full mt-4" variant="accent">
               Confirm on WhatsApp
