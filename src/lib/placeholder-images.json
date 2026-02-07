@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "turf-1",
+      "description": "A well-lit turf at night",
+      "imageUrl": "https://images.unsplash.com/photo-1763517891225-7e780fc3344e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzb2NjZXIlMjBmaWVsZCUyMG5pZ2h0fGVufDB8fHx8MTc3MDQ1NTkzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer field night"
+    },
+    {
+      "id": "turf-2",
+      "description": "A sunny day at a turf field",
+      "imageUrl": "https://images.unsplash.com/photo-1713009186438-8f3e660935e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzb2NjZXIlMjBmaWVsZCUyMGRheXxlbnwwfHx8fDE3NzA0NTU5MzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer field day"
+    },
+    {
+      "id": "turf-3",
+      "description": "An aerial view of a large turf complex",
+      "imageUrl": "https://images.unsplash.com/photo-1533570123704-aac26a01f168?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzcG9ydHMlMjBjb21wbGV4JTIwYWVyaWFsfGVufDB8fHx8MTc3MDQ1NTkzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sports complex aerial"
+    },
+    {
+      "id": "turf-4",
+      "description": "Close up of a soccer ball on green turf",
+      "imageUrl": "https://images.unsplash.com/photo-1614632537190-23e4146777db?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzb2NjZXIlMjBiYWxsfGVufDB8fHx8MTc3MDQ1NTkzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "soccer ball"
+    }
+  ]
 }
