@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, IndianRupee, Loader2, Trash2 } from 'lucide-react';
-import { addBooking, deleteBooking, getAllBookings } from '@/lib/booking-service';
+import { addBooking, deleteBooking, getAllBookings, getBookedSlots } from '@/lib/booking-service';
 import type { Booking } from '@/lib/booking-service';
 import { getAllTurfs } from '@/lib/turf-service';
 import { timeSlots } from '@/lib/data';
@@ -52,7 +52,7 @@ import { getPriceForSlot } from '@/lib/pricing';
 const manualBookingSchema = z.object({
   turfId: z.string().min(1, 'Please select a turf.'),
   date: z.date({ required_error: 'A date is required.' }),
-  timeSlot: z.string().min(1, 'Please select a time slot.'),
+  timeSlots: z.array(z.string()).min(1, 'Please select at least one time slot.'),
   whatsappNumber: z.string().optional(),
 });
 
@@ -64,8 +64,10 @@ export function BookingList() {
   const [turfs, setTurfs] = useState<Awaited<ReturnType<typeof getAllTurfs>>>([]);
   const [loading, setLoading] = useState(true);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const { toast } = useToast();
-
+  
   const fetchBookings = async () => {
     setLoading(true);
     try {
@@ -94,6 +96,10 @@ export function BookingList() {
     return () => window.removeEventListener('turfs-updated', handler);
   }, []);
 
+  
+
+  
+
   const handleDelete = async (bookingId: string) => {
     try {
       await deleteBooking(bookingId);
@@ -106,27 +112,51 @@ export function BookingList() {
   
   const form = useForm<ManualBookingFormValues>({
     resolver: zodResolver(manualBookingSchema),
-    defaultValues: { whatsappNumber: '' },
+    defaultValues: { whatsappNumber: '', timeSlots: [] },
   });
   
+  const selectedDate = form.watch('date');
+  const selectedTurfId = form.watch('turfId');
+  useEffect(() => {
+    async function fetchBookedSlots() {
+      if (selectedDate && selectedTurfId && user) {
+        setLoadingSlots(true);
+        try {
+          const slots = await getBookedSlots(selectedTurfId, selectedDate);
+          setBookedSlots(slots);
+        } catch (err) {
+          console.error('Failed to fetch booked slots:', err);
+          setBookedSlots([]);
+        } finally {
+          setLoadingSlots(false);
+        }
+      } else {
+        setBookedSlots([]);
+      }
+    }
+    fetchBookedSlots();
+  }, [selectedDate, selectedTurfId, user]);
   async function onSubmit(data: ManualBookingFormValues) {
     if (!user) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         return;
     }
     try {
-      await addBooking({
-          turfId: data.turfId,
-          date: format(data.date, 'yyyy-MM-dd'),
-          timeSlot: data.timeSlot,
-          whatsappNumber: data.whatsappNumber?.trim() || 'N/A (Admin)',
-          userId: user.uid,
-          userName: user.displayName || 'Admin',
-          status: 'confirmed',
-          createdAt: new Date().toISOString(),
-      });
+      // Add a booking for each selected time slot
+      for (const timeSlot of data.timeSlots) {
+        await addBooking({
+            turfId: data.turfId,
+            date: format(data.date, 'yyyy-MM-dd'),
+            timeSlot,
+            whatsappNumber: data.whatsappNumber?.trim() || 'N/A (Admin)',
+            userId: user.uid,
+            userName: user.displayName || 'Admin',
+            status: 'confirmed',
+            createdAt: new Date().toISOString(),
+        });
+      }
       await fetchBookings();
-      form.reset({ turfId: '', date: undefined, timeSlot: '', whatsappNumber: '' });
+      form.reset({ turfId: '', date: undefined, timeSlots: [], whatsappNumber: '' });
       toast({ title: 'Booking Added', description: 'The new booking has been created and confirmed.' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to add booking.' });
@@ -270,34 +300,74 @@ export function BookingList() {
                             />
                             <FormField
                                 control={form.control}
-                                name="timeSlot"
+                                name="timeSlots"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Time Slot</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Select a time slot" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {timeSlots.map((slot) => (
-                                            <SelectItem key={slot} value={slot}>
-                                                {slot}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                    </Select>
+                                    <FormLabel>Time Slots (1 hour each)</FormLabel>
+                                    <div className="grid grid-cols-3 gap-2 pt-2">
+                                      {selectedDate && selectedTurfId && timeSlots.map((slot) => {
+                                        const isBooked = bookedSlots.includes(slot);
+                                        const isSelected = field.value.includes(slot);
+                                        const turf = turfs.find((t) => t.id === selectedTurfId);
+                                        const price = turf && selectedDate ? getPriceForSlot(turf, slot, selectedDate) : 0;
+                                        
+                                        return (
+                                          <button
+                                            key={slot}
+                                            type="button"
+                                            disabled={isBooked || loadingSlots}
+                                            onClick={() => {
+                                              if (!isBooked) {
+                                                const newValue = isSelected 
+                                                  ? field.value.filter(s => s !== slot)
+                                                  : [...field.value, slot];
+                                                field.onChange(newValue);
+                                              }
+                                            }}
+                                            className={cn(
+                                              'p-2 text-xs rounded-md border transition-all duration-200 cursor-pointer',
+                                              isBooked 
+                                                ? 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed opacity-60'
+                                                : isSelected
+                                                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                                                : 'bg-white border-gray-300 text-gray-700 hover:border-primary hover:bg-primary/5'
+                                            )}
+                                          >
+                                            <div className="font-medium">{slot}</div>
+                                            <div className="text-foreground font-medium flex items-center justify-center gap-1 mt-1">
+                                              <IndianRupee className="h-3.5 w-3.5" />
+                                              {price}
+                                            </div>
+                                            {isBooked && <div className="text-xs mt-1">Booked</div>}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    {!selectedDate && <p className="text-sm text-destructive mt-1">Please select a date first</p>}
+                                    {selectedDate && !selectedTurfId && <p className="text-sm text-destructive mt-1">Please select a turf first</p>}
+                                    {selectedDate && field.value.length > 0 && (
+                                      <p className="text-sm text-muted-foreground mt-2">
+                                        Selected: {field.value.join(', ')}
+                                      </p>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                                 )}
                             />
-                            {form.watch('turfId') && form.watch('date') && form.watch('timeSlot') && (() => {
+                            {form.watch('turfId') && form.watch('date') && form.watch('timeSlots').length > 0 && (() => {
                                 const turf = turfs.find(t => t.id === form.watch('turfId'));
+                                const totalPrice = form.watch('timeSlots').reduce((sum, slot) => {
+                                  return sum + getPriceForSlot(turf!, slot, form.watch('date'));
+                                }, 0);
                                 return turf ? (
                                     <div className="rounded-lg border bg-muted/50 p-3">
-                                        <p className="text-sm font-medium text-muted-foreground">Price</p>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Price</p>
                                         <p className="text-xl font-semibold flex items-center gap-1">
                                             <IndianRupee className="h-5 w-5" />
-                                            {getPriceForSlot(turf, form.watch('timeSlot'), form.watch('date'))}
+                                            {totalPrice}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          ({form.watch('timeSlots').length} hour{form.watch('timeSlots').length > 1 ? 's' : ''})
                                         </p>
                                     </div>
                                 ) : null;

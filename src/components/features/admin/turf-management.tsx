@@ -58,7 +58,7 @@ export function TurfManagement() {
     defaultValues: {
       name: '',
       location: '',
-      price: 1000,
+      price: 500,
       imageId: '',
       amenities: [],
     },
@@ -81,7 +81,7 @@ export function TurfManagement() {
       form.reset({
         name: '',
         location: '',
-        price: 1000,
+        price: 500,
         imageId: '',
         amenities: [],
       });

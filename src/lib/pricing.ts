@@ -13,12 +13,16 @@ export function getPriceForSlot(turf: Turf, slot: string, date: Date | null | un
     const day = getDay(date); // Sunday = 0, Saturday = 6
     const isWeekend = day === 0 || day === 6;
 
-    const isPeakTime = slot === '18:00 - 20:00' || slot === '20:00 - 22:00';
+    // Extract the start hour from the slot (format: HH:MM - HH:MM)
+    const startHourString = slot.split(':')[0];
+    const startHour = parseInt(startHourString, 10);
+    
+    const isPeakTime = startHour >= 18 && startHour < 22;
     
     let finalPrice = turf.price;
 
     if (isPeakTime) {
-        finalPrice += 500; // 500 premium for peak hours
+        finalPrice += 500; // 500 premium for peak hours (6 PM to 10 PM)
     }
 
     if (isWeekend) {

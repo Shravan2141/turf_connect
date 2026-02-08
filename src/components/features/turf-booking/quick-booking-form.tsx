@@ -55,20 +55,20 @@ const quickBookingSchema = z.object({
     today.setHours(0, 0, 0, 0);
     return date >= today;
   }, 'Date cannot be in the past.'),
-  timeSlot: z.string({ required_error: 'Please select a time slot.' }).min(1, 'Please select a time slot.'),
+  timeSlots: z.array(z.string()).min(1, 'Please select at least one time slot.'),
   whatsappNumber: z
     .string()
     .min(10, 'Please enter a valid WhatsApp number.')
     .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format.'),
 }).refine((data) => {
-  // Ensure timeSlot is only selected if date is selected
-  if (!data.date && data.timeSlot) {
+  // Ensure timeSlots is only selected if date is selected
+  if (!data.date && data.timeSlots.length > 0) {
     return false;
   }
   return true;
 }, {
-  message: 'Please select a date before choosing a time slot.',
-  path: ['timeSlot'],
+  message: 'Please select a date before choosing time slots.',
+  path: ['timeSlots'],
 });
 
 type QuickBookingFormValues = z.infer<typeof quickBookingSchema>;
@@ -104,7 +104,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
 
   const form = useForm<QuickBookingFormValues>({
     resolver: zodResolver(quickBookingSchema),
-    defaultValues: { whatsappNumber: '' },
+    defaultValues: { whatsappNumber: '', timeSlots: [] },
   });
 
   const selectedDate = form.watch('date');
@@ -157,25 +157,32 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
 
     setSubmitting(true);
     try {
-      await addBooking({
-        turfId: data.turfId,
-        date: format(data.date, 'yyyy-MM-dd'),
-        timeSlot: data.timeSlot,
-        whatsappNumber: data.whatsappNumber.replace(/\s/g, '').trim(),
-        userId: user.uid,
-        userName: user.displayName || 'Unknown User',
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
+      // Add a booking for each selected time slot
+      for (const timeSlot of data.timeSlots) {
+        await addBooking({
+          turfId: data.turfId,
+          date: format(data.date, 'yyyy-MM-dd'),
+          timeSlot,
+          whatsappNumber: data.whatsappNumber.replace(/\s/g, '').trim(),
+          userId: user.uid,
+          userName: user.displayName || 'Unknown User',
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        });
+      }
 
-      const price = getPriceForSlot(turf, data.timeSlot, data.date);
+      // Calculate total price
+      const totalPrice = data.timeSlots.reduce((sum, slot) => {
+        return sum + getPriceForSlot(turf, slot, data.date);
+      }, 0);
+
       const message = encodeURIComponent(
-        `Hi! I'd like to request a booking for ${turf.name} on ${format(data.date, 'PPP')} from ${data.timeSlot} for ₹${price}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
+        `Hi! I'd like to request a booking for ${turf.name} on ${format(data.date, 'PPP')} for the following slots: ${data.timeSlots.join(', ')} for a total of ₹${totalPrice}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
       );
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
       window.open(whatsappUrl, '_blank');
 
-      form.reset({ turfId: '', date: undefined, timeSlot: '', whatsappNumber: user.phoneNumber || '' });
+      form.reset({ turfId: '', date: undefined, timeSlots: [], whatsappNumber: user.phoneNumber || '' });
       toast({ title: 'Booking Requested', description: 'Proceed to WhatsApp to confirm with the admin.' });
       
       // Close dialog after successful booking
@@ -306,52 +313,75 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
             />
             <FormField
               control={form.control}
-              name="timeSlot"
+              name="timeSlots"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Time Slot (2 hours)</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ''}
-                    disabled={!selectedDate || loadingSlots}
-                  >
-                    <FormControl>
-                      <SelectTrigger className={!selectedDate ? 'text-muted-foreground' : ''}>
-                        <SelectValue placeholder={
-                          !selectedDate ? 'Select a date and turf first' :
-                          loadingSlots ? 'Loading slots...' : 
-                          'Select a time slot'
-                        } />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {selectedDate && selectedTurfId && timeSlots.map((slot) => {
-                        const turf = turfs.find((t) => t.id === selectedTurfId);
-                        const isBooked = bookedSlots.includes(slot);
-                        const price = turf && selectedDate ? getPriceForSlot(turf, slot, selectedDate) : 0;
-                        return (
-                          <SelectItem key={slot} value={slot} disabled={isBooked}>
-                            {`${slot} - ₹${price}`}
-                            {isBooked && ' (Booked)'}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Time Slots (1 hour each)</FormLabel>
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    {selectedDate && selectedTurfId && timeSlots.map((slot) => {
+                      const isBooked = bookedSlots.includes(slot);
+                      const isSelected = field.value.includes(slot);
+                      const turf = turfs.find((t) => t.id === selectedTurfId);
+                      const price = turf && selectedDate ? getPriceForSlot(turf, slot, selectedDate) : 0;
+                      
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={isBooked || loadingSlots}
+                          onClick={() => {
+                            if (!isBooked) {
+                              const newValue = isSelected 
+                                ? field.value.filter(s => s !== slot)
+                                : [...field.value, slot];
+                              field.onChange(newValue);
+                            }
+                          }}
+                          className={cn(
+                            'p-2 text-xs rounded-md border transition-all duration-200 cursor-pointer',
+                            isBooked 
+                              ? 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed opacity-60'
+                              : isSelected
+                              ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                              : 'bg-white border-gray-300 text-gray-700 hover:border-primary hover:bg-primary/5'
+                          )}
+                        >
+                          <div className="font-medium">{slot}</div>
+                            <div className="text-foreground font-medium flex items-center justify-center gap-1 mt-1">
+                              <IndianRupee className="h-3.5 w-3.5" />
+                              {price}
+                            </div>
+                          {/* <div className="text-xs mt-0.5">₹{price}</div> */}
+                          {isBooked && <div className="text-xs mt-1">Booked</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
                   {!selectedDate && <p className="text-sm text-destructive mt-1">Please select a date first</p>}
                   {selectedDate && !selectedTurfId && <p className="text-sm text-destructive mt-1">Please select a turf first</p>}
+                  {selectedDate && field.value.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Selected: {field.value.join(', ')}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {form.watch('turfId') && form.watch('date') && form.watch('timeSlot') && (() => {
+            {form.watch('turfId') && form.watch('date') && form.watch('timeSlots').length > 0 && (() => {
               const turf = turfs.find((t) => t.id === form.watch('turfId'));
+              const totalPrice = form.watch('timeSlots').reduce((sum, slot) => {
+                return sum + getPriceForSlot(turf!, slot, form.watch('date'));
+              }, 0);
               return turf ? (
                 <div className="rounded-lg border bg-muted/50 p-3">
-                  <p className="text-sm font-medium text-muted-foreground">Price</p>
+                  <p className="text-sm font-medium text-muted-foreground">Total Price</p>
                   <p className="text-xl font-semibold flex items-center gap-1">
                     <IndianRupee className="h-5 w-5" />
-                    {getPriceForSlot(turf, form.watch('timeSlot'), form.watch('date'))}
+                    {totalPrice}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ({form.watch('timeSlots').length} hour{form.watch('timeSlots').length > 1 ? 's' : ''})
                   </p>
                 </div>
               ) : null;

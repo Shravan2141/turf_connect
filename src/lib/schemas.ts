@@ -10,18 +10,18 @@ export const bookingSchema = z.object({
     today.setHours(0, 0, 0, 0);
     return date >= today;
   }, 'Date cannot be in the past.'),
-  timeSlot: z.string({ required_error: 'Please select a time slot.' }).min(1, 'Please select a time slot.'),
+  timeSlots: z.array(z.string()).min(1, 'Please select at least one time slot.'),
   whatsappNumber: z
     .string()
     .min(10, 'Please enter a valid WhatsApp number.')
     .regex(/^\+?[1-9]\d{9,14}$/, 'Invalid phone number format.'),
 }).refine((data) => {
-  // Ensure timeSlot is only selected if date is selected
-  if (!data.date && data.timeSlot) {
+  // Ensure timeSlots is only selected if date is selected
+  if (!data.date && data.timeSlots.length > 0) {
     return false;
   }
   return true;
 }, {
-  message: 'Please select a date before choosing a time slot.',
-  path: ['timeSlot'],
+  message: 'Please select a date before choosing time slots.',
+  path: ['timeSlots'],
 });

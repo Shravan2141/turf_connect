@@ -11,6 +11,7 @@ Welcome to the Pavallion Sports Arena booking application! This is a Next.js web
 - **AI Booking Assistant**: Get smart recommendations for alternative slots if your preferred time is unavailable.
 - **Admin Panel**: A dedicated section for admins to view all bookings and manually add or remove them.
 - **Dynamic Pricing**: Prices automatically adjust for peak hours and weekends.
+ - **Dynamic Pricing**: Base price is ₹500/hr by default (seeded). Prices automatically adjust: +₹500 during peak hours (18:00–22:00) and +₹300 on weekends.
 - **WhatsApp Integration**: Seamlessly confirm bookings by redirecting users to WhatsApp with a pre-filled message.
 - **Responsive Design**: A clean, modern UI that works across all devices.
 

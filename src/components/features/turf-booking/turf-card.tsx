@@ -68,7 +68,7 @@ export function TurfCard({ turf, imageUrl, onTurfSelect }: TurfCardProps) {
             <div className="flex items-center text-lg font-bold">
               <IndianRupee className="mr-1 h-5 w-5" />
               {turf.price}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">/2 hrs</span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">/hr</span>
             </div>
             <p className="text-xs text-muted-foreground">*Price may vary depending on the time slot.</p>
           </div>

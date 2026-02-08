@@ -30,13 +30,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { bookingAssistantRecommendations } from '@/ai/flows/booking-assistant-recommendations';
 import type { BookingAssistantRecommendationsOutput } from '@/ai/flows/booking-assistant-recommendations';
@@ -65,7 +58,7 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       date: undefined,
-      timeSlot: '',
+      timeSlots: [],
       whatsappNumber: '',
     },
   });
@@ -112,83 +105,66 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
     setView('loading');
     setRecommendations(null);
 
-    const isHardcodedUnavailable = turf.id === '1' && data.timeSlot === '18:00 - 20:00' && !bookedSlots.includes(data.timeSlot);
-
-    if (isHardcodedUnavailable) {
-      try {
-        const [startHourString] = data.timeSlot.split(':');
-        const startHour = parseInt(startHourString, 10);
-        
-        const preferredStartTime = new Date(data.date!);
-        preferredStartTime.setHours(startHour, 0, 0, 0);
-
-        const preferredEndTime = new Date(preferredStartTime);
-        preferredEndTime.setHours(startHour + 2);
-
-        const result = await bookingAssistantRecommendations({
-          turfId: turf.id,
-          preferredStartTime: preferredStartTime.toISOString(),
-          preferredEndTime: preferredEndTime.toISOString(),
-          userId: user.uid,
-        });
-        
-        if (result.recommendations && result.recommendations.length > 0) {
-          setRecommendations(result.recommendations);
-          setView('recommendations');
-        } else {
-          throw new Error("No alternative slots found.");
-        }
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'AI Assistant Error',
-          description: 'Could not fetch recommendations. Please try another time slot.',
-        });
-        setView('form');
-      }
-    } else {
-      setTimeout(() => setView('confirmed'), 500);
+    // Check if any selected slots are unavailable
+    const unavailableSlots = data.timeSlots.filter(slot => bookedSlots.includes(slot));
+    
+    if (unavailableSlots.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Slot Not Available',
+        description: `The following slots are no longer available: ${unavailableSlots.join(', ')}. Please select different slots.`,
+      });
+      setView('form');
+      return;
     }
+
+    // All selected slots are available
+    setTimeout(() => setView('confirmed'), 500);
   }
 
   function handleRecommendationSelect(startTime: string, endTime: string) {
     const start = new Date(startTime);
-    const end = new Date(endTime);
-    const newTimeSlot = `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
+    const newTimeSlot = `${format(start, 'HH:mm')} - ${format(new Date(endTime), 'HH:mm')}`;
     
     form.setValue('date', start);
-    form.setValue('timeSlot', newTimeSlot);
+    form.setValue('timeSlots', [newTimeSlot]);
     setView('confirmed');
   }
 
   async function handleWhatsAppRedirect() {
     const data = form.getValues();
-    if (!data.date || !user) {
+    if (!data.date || !user || data.timeSlots.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Please select a date and be logged in before confirming.',
+        description: 'Please select a date, time slots, and be logged in before confirming.',
       });
       return;
     }
     
-    const price = getPriceForSlot(turf, data.timeSlot, data.date);
-
     try {
-      await addBooking({
-        turfId: turf.id,
-        date: format(data.date, 'yyyy-MM-dd'),
-        timeSlot: data.timeSlot,
-        whatsappNumber: data.whatsappNumber,
-        userId: user.uid,
-        userName: user.displayName || 'Unknown User'
-      });
+      // Add a booking for each selected time slot
+      for (const timeSlot of data.timeSlots) {
+        await addBooking({
+          turfId: turf.id,
+          date: format(data.date, 'yyyy-MM-dd'),
+          timeSlot,
+          whatsappNumber: data.whatsappNumber,
+          userId: user.uid,
+          userName: user.displayName || 'Unknown User'
+        });
+      }
       
+      // Calculate total price
+      const totalPrice = data.timeSlots.reduce((sum, slot) => {
+        return sum + getPriceForSlot(turf, slot, data.date);
+      }, 0);
+
       const message = encodeURIComponent(
         `Hi! I'd like to request a booking for ${turf.name} on ${format(
           data.date,
           'PPP'
-        )} from ${data.timeSlot} for ₹${price}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
+        )} for the following slots: ${data.timeSlots.join(', ')} for a total of ₹${totalPrice}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
       );
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
       window.open(whatsappUrl, '_blank');
@@ -317,34 +293,51 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
 
               <FormField
                 control={form.control}
-                name="timeSlot"
+                name="timeSlots"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time Slot (2 hours)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!selectedDate || loadingSlots}>
-                      <FormControl>
-                        <SelectTrigger className={!selectedDate ? 'text-muted-foreground' : ''}>
-                          <SelectValue placeholder={
-                            !selectedDate ? 'Select a date first' :
-                            loadingSlots ? 'Loading slots...' : 
-                            'Select a time slot'
-                          } />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {selectedDate && timeSlots.map((slot) => {
-                          const isBooked = bookedSlots.includes(slot);
-                          const price = getPriceForSlot(turf, slot, selectedDate);
-                          return (
-                           <SelectItem key={slot} value={slot} disabled={isBooked}>
-                             {`${slot} - ₹${price}`}
-                             {isBooked && " (Booked)"}
-                           </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Time Slots (1 hour each)</FormLabel>
+                    <div className="grid grid-cols-3 gap-2 pt-2">
+                      {selectedDate && timeSlots.map((slot) => {
+                        const isBooked = bookedSlots.includes(slot);
+                        const isSelected = field.value.includes(slot);
+                        const price = getPriceForSlot(turf, slot, selectedDate);
+                        
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            disabled={isBooked || loadingSlots}
+                            onClick={() => {
+                              if (!isBooked) {
+                                const newValue = isSelected 
+                                  ? field.value.filter(s => s !== slot)
+                                  : [...field.value, slot];
+                                field.onChange(newValue);
+                              }
+                            }}
+                            className={cn(
+                              'p-2 text-xs rounded-md border transition-all duration-200 cursor-pointer',
+                              isBooked 
+                                ? 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed opacity-60'
+                                : isSelected
+                                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                                : 'bg-white border-gray-300 text-gray-700 hover:border-primary hover:bg-primary/5'
+                            )}
+                          >
+                            <div className="font-medium">{slot}</div>
+                            <div className="text-xs mt-0.5">₹{price}</div>
+                            {isBooked && <div className="text-xs mt-1">Booked</div>}
+                          </button>
+                        );
+                      })}
+                    </div>
                     {!selectedDate && <p className="text-sm text-destructive mt-1">Please select a date first</p>}
+                    {selectedDate && field.value.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selected: {field.value.join(', ')}
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -375,16 +368,28 @@ export function BookingDialog({ turf, children }: { turf: Turf, children: React.
         {view === 'confirmed' && (
           <div className="flex flex-col items-center justify-center gap-4 py-8 text-center">
             <PartyPopper className="h-12 w-12 text-green-500" />
-            <h3 className="text-xl font-semibold">Slot Available!</h3>
+            <h3 className="text-xl font-semibold">Slots Available!</h3>
             <p className="text-muted-foreground">
-              Your selected slot is available. Proceed to WhatsApp to confirm your booking with the admin.
+              Your selected slots are available. Proceed to WhatsApp to confirm your booking with the admin.
             </p>
             <div className="text-left bg-secondary p-4 rounded-md w-full">
               <h4 className="font-bold mb-2">Booking Summary</h4>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Turf:</strong> {turf.name}</p>
               <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Date:</strong> {form.getValues('date') ? format(form.getValues('date')!, 'PPP') : ''}</p>
-              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Time:</strong> {form.getValues('timeSlot')}</p>
-              <p className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Price:</strong> ₹{getPriceForSlot(turf, form.getValues('timeSlot'), form.getValues('date'))}</p>
+              <div className="flex items-start gap-2 mt-2">
+                <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Time Slots:</strong>
+                  <div className="ml-2 mt-1 space-y-1">
+                    {form.getValues('timeSlots').map((slot) => (
+                      <div key={slot} className="text-sm">
+                        {slot} - ₹{getPriceForSlot(turf, slot, form.getValues('date')!)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="flex items-center gap-2 mt-2"><CheckCircle className="h-4 w-4 text-green-500" /><strong>Total Price:</strong> ₹{form.getValues('timeSlots').reduce((sum, slot) => sum + getPriceForSlot(turf, slot, form.getValues('date')!), 0)}</p>
             </div>
             <Button onClick={handleWhatsAppRedirect} className="w-full mt-4" variant="accent">
               Confirm on WhatsApp
