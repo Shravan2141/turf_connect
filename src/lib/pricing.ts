@@ -17,7 +17,7 @@ export function getPriceForSlot(turf: Turf, slot: string, date: Date | null | un
     const startHourString = slot.split(':')[0];
     const startHour = parseInt(startHourString, 10);
     
-    const isPeakTime = startHour >= 18 && startHour < 22;
+    const isPeakTime = startHour >= 18 && startHour <= 23;
     
     let finalPrice = turf.price;
 

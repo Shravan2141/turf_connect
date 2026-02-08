@@ -182,7 +182,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
       window.open(whatsappUrl, '_blank');
 
-      form.reset({ turfId: '', date: undefined, timeSlots: [], whatsappNumber: user.phoneNumber || '' });
+      form.reset({ turfId: initialTurfId || '', date: undefined, timeSlots: [], whatsappNumber: user.phoneNumber || '' });
       toast({ title: 'Booking Requested', description: 'Proceed to WhatsApp to confirm with the admin.' });
       
       // Close dialog after successful booking
@@ -241,20 +241,28 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Turf</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a turf" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {turfs.map((turf) => (
-                        <SelectItem key={turf.id} value={turf.id}>
-                          {turf.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {initialTurfId ? (
+                    // Display as locked/read-only when pre-selected from turf card
+                    <div className="w-full p-3 rounded-md border border-gray-300 bg-gray-50 text-gray-800 font-medium">
+                      {turfs.find((t) => t.id === field.value)?.name || 'Selected Turf'}
+                    </div>
+                  ) : (
+                    // Allow selection when no turf is pre-selected
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a turf" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {turfs.map((turf) => (
+                          <SelectItem key={turf.id} value={turf.id}>
+                            {turf.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
