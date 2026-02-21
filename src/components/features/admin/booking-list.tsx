@@ -53,7 +53,7 @@ const manualBookingSchema = z.object({
   turfId: z.string().min(1, 'Please select a turf.'),
   date: z.date({ required_error: 'A date is required.' }),
   timeSlots: z.array(z.string()).min(1, 'Please select at least one time slot.'),
-  whatsappNumber: z.string().optional(),
+  whatsappNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid WhatsApp number (e.g., +91 98765 43210)').optional().or(z.literal('')),
 });
 
 type ManualBookingFormValues = z.infer<typeof manualBookingSchema>;
@@ -141,6 +141,34 @@ export function BookingList() {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         return;
     }
+
+    // Additional validation
+    if (!selectedTurfId) {
+        toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a turf.' });
+        return;
+    }
+
+    if (!selectedDate) {
+        toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a date.' });
+        return;
+    }
+
+    if (data.timeSlots.length === 0) {
+        toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select at least one time slot.' });
+        return;
+    }
+
+    // Check if selected slots are already booked
+    const alreadyBookedSlots = data.timeSlots.filter(slot => bookedSlots.includes(slot));
+    if (alreadyBookedSlots.length > 0) {
+        toast({ 
+            variant: 'destructive', 
+            title: 'Slots Already Booked', 
+            description: `The following time slots are already booked: ${alreadyBookedSlots.join(', ')}` 
+        });
+        return;
+    }
+
     try {
       // Add a booking for each selected time slot
       for (const timeSlot of data.timeSlots) {
@@ -157,9 +185,17 @@ export function BookingList() {
       }
       await fetchBookings();
       form.reset({ turfId: '', date: undefined, timeSlots: [], whatsappNumber: '' });
-      toast({ title: 'Booking Added', description: 'The new booking has been created and confirmed.' });
+      toast({ 
+        title: 'Booking Added', 
+        description: `Successfully created ${data.timeSlots.length} booking${data.timeSlots.length > 1 ? 's' : ''}.` 
+      });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to add booking.' });
+        console.error('Error adding booking:', error);
+        toast({ 
+            variant: 'destructive', 
+            title: 'Error', 
+            description: 'Failed to add booking. Please try again.' 
+        });
     }
   }
 

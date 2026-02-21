@@ -62,7 +62,7 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold mb-4">Pending Booking Requests</h2>
           <PendingBookings />
         </section>
-        <section>
+        <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Confirmed Bookings</h2>
           <BookingList />
         </section>

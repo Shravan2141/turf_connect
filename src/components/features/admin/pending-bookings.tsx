@@ -76,7 +76,7 @@ export function PendingBookings() {
       
       // Open WhatsApp with user's number
       const whatsappUrl = `https://wa.me/${booking.whatsappNumber.replace(/\D/g, '')}?text=${message}`;
-      window.open(whatsappUrl, '_blank');
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 
       // Refresh bookings
       await fetchBookings();
@@ -124,7 +124,7 @@ export function PendingBookings() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

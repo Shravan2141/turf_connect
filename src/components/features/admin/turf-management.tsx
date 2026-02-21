@@ -230,6 +230,7 @@ export function TurfManagement() {
                             <FormItem className="flex items-center space-x-2 space-y-0">
                               <FormControl>
                                 <Checkbox
+                                  id={amenity}
                                   checked={field.value?.includes(amenity)}
                                   onCheckedChange={(checked) => {
                                     const next = checked
@@ -239,7 +240,7 @@ export function TurfManagement() {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal">{amenity}</FormLabel>
+                              <FormLabel className="font-normal" htmlFor={amenity}>{amenity}</FormLabel>
                             </FormItem>
                           )}
                         />
