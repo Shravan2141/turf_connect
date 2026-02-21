@@ -11,6 +11,8 @@ import {
 import { MapPin, IndianRupee } from 'lucide-react';
 import { AmenityIcon } from './amenity-icon';
 import { buttonVariants } from '@/components/ui/button';
+import { useAuth } from '@/components/features/auth/auth-provider';
+import { LoginButton } from '@/components/features/auth/login-button';
 
 type TurfCardProps = {
   turf: Turf;
@@ -19,7 +21,17 @@ type TurfCardProps = {
 };
 
 export function TurfCard({ turf, imageUrl, onTurfSelect }: TurfCardProps) {
+  const { user } = useAuth();
+
   const handleClick = () => {
+    if (!user) {
+      // Trigger login button click programmatically
+      const loginButton = document.querySelector('[data-login-trigger]') as HTMLButtonElement;
+      if (loginButton) {
+        loginButton.click();
+      }
+      return;
+    }
     onTurfSelect?.(turf.id);
   };
 

@@ -25,7 +25,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
   );
 
-export function LoginButton() {
+export function LoginButton({ ...props }: React.ComponentProps<typeof Button>) {
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -38,7 +38,7 @@ export function LoginButton() {
   };
 
   return (
-    <Button onClick={handleLogin} variant="secondary">
+    <Button onClick={handleLogin} variant="secondary" {...props}>
       <GoogleIcon className="mr-2 h-4 w-4" />
       Login
     </Button>
