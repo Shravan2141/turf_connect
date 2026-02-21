@@ -9,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useAuth } from '@/components/features/auth/auth-provider';
+import { LoginButton } from '@/components/features/auth/login-button';
 
 type BookingFormDialogProps = {
   open: boolean;
@@ -17,6 +19,27 @@ type BookingFormDialogProps = {
 };
 
 export function BookingFormDialog({ open, onOpenChange, selectedTurfId }: BookingFormDialogProps) {
+  const { user } = useAuth();
+
+  // if user isn't logged in, render a small login prompt instead of the form
+  if (!user) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl">Login Required</DialogTitle>
+            <DialogDescription>
+              You must be logged in to book a turf. Please sign in with Google.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex justify-center">
+            <LoginButton />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
