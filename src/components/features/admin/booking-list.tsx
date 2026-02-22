@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, IndianRupee, Loader2, Trash2 } from 'lucide-react';
-import { addBooking, deleteBooking, getAllBookings, getBookedSlots } from '@/lib/booking-service';
+import { addBooking, getBookedSlots, convertSlotsToTimeRange, getAllBookings, deleteBooking } from '@/lib/booking-service';
 import type { Booking } from '@/lib/booking-service';
 import { getAllTurfs } from '@/lib/turf-service';
 import { timeSlots } from '@/lib/data';
@@ -170,24 +170,27 @@ export function BookingList() {
     }
 
     try {
-      // Add a booking for each selected time slot
-      for (const timeSlot of data.timeSlots) {
-        await addBooking({
-            turfId: data.turfId,
-            date: format(data.date, 'yyyy-MM-dd'),
-            timeSlot,
-            whatsappNumber: data.whatsappNumber?.trim() || 'N/A (Admin)',
-            userId: user.uid,
-            userName: user.displayName || 'Admin',
-            status: 'confirmed',
-            createdAt: new Date().toISOString(),
-        });
-      }
+      // Convert selected slots to time range
+      const { startTime, endTime, timeRange } = convertSlotsToTimeRange(data.timeSlots);
+      
+      // Create a single booking with merged time range
+      await addBooking({
+          turfId: data.turfId,
+          date: format(data.date, 'yyyy-MM-dd'),
+          startTime,
+          endTime,
+          timeRange,
+          whatsappNumber: data.whatsappNumber?.trim() || 'N/A (Admin)',
+          userId: user.uid,
+          userName: user.displayName || 'Admin',
+          status: 'confirmed',
+          createdAt: new Date().toISOString(),
+      });
       await fetchBookings();
       form.reset({ turfId: '', date: undefined, timeSlots: [], whatsappNumber: '' });
       toast({ 
         title: 'Booking Added', 
-        description: `Successfully created ${data.timeSlots.length} booking${data.timeSlots.length > 1 ? 's' : ''}.` 
+        description: `Successfully created booking for ${timeRange}.` 
       });
     } catch (error) {
         console.error('Error adding booking:', error);
@@ -214,7 +217,7 @@ export function BookingList() {
                         <TableRow>
                         <TableHead>Turf</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Time Slot</TableHead>
+                        <TableHead>Time Range</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Booked By</TableHead>
                         <TableHead>WhatsApp</TableHead>
@@ -232,16 +235,30 @@ export function BookingList() {
                             bookings.filter(b => b.status === 'confirmed').map((booking) => {
                                 const turf = turfs.find(t => t.id === booking.turfId);
                                 const bookingDate = new Date(booking.date.replace(/-/g, '/'));
-                                const price = turf ? getPriceForSlot(turf, booking.timeSlot, bookingDate) : 0;
+                                
+                                // Calculate total price for the time range
+                                let totalPrice = 0;
+                                if (turf && booking.startTime && booking.endTime) {
+                                  const startHour = parseInt(booking.startTime.split(':')[0]);
+                                  const endHour = parseInt(booking.endTime.split(':')[0]);
+                                  
+                                  for (let hour = startHour; hour < endHour; hour++) {
+                                    const slotStart = hour.toString().padStart(2, '0') + ':00';
+                                    const slotEnd = (hour + 1).toString().padStart(2, '0') + ':00';
+                                    const slot = `${slotStart} - ${slotEnd}`;
+                                    totalPrice += getPriceForSlot(turf, slot, bookingDate);
+                                  }
+                                }
+                                
                                 return (
                                 <TableRow key={booking.id}>
                                     <TableCell className="font-medium">{turf?.name || 'Unknown'}</TableCell>
                                     <TableCell>{format(bookingDate, 'PPP')}</TableCell>
-                                    <TableCell>{booking.timeSlot}</TableCell>
+                                    <TableCell>{booking.timeRange || booking.timeSlot}</TableCell>
                                     <TableCell>
                                         <span className="inline-flex items-center gap-1">
                                             <IndianRupee className="h-4 w-4" />
-                                            {price}
+                                            {totalPrice}
                                         </span>
                                     </TableCell>
                                     <TableCell>{booking.userName || '—'}</TableCell>

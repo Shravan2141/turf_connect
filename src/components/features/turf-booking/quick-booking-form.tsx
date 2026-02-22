@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, IndianRupee, Loader2 } from 'lucide-react';
-import { addBooking, getBookedSlots } from '@/lib/booking-service';
+import { addBooking, getBookedSlots, convertSlotsToTimeRange } from '@/lib/booking-service';
 import { getAllTurfs } from '@/lib/turf-service';
 import { timeSlots } from '@/lib/data';
 import type { Turf } from '@/lib/types';
@@ -176,19 +176,22 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
 
     setSubmitting(true);
     try {
-      // Add a booking for each selected time slot
-      for (const timeSlot of data.timeSlots) {
-        await addBooking({
-          turfId: data.turfId,
-          date: format(data.date, 'yyyy-MM-dd'),
-          timeSlot,
-          whatsappNumber: data.whatsappNumber.replace(/\s/g, '').trim(),
-          userId: user.uid,
-          userName: user.displayName || 'Unknown User',
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        });
-      }
+      // Convert selected slots to time range
+      const { startTime, endTime, timeRange } = convertSlotsToTimeRange(data.timeSlots);
+      
+      // Create a single booking with merged time range
+      await addBooking({
+        turfId: data.turfId,
+        date: format(data.date, 'yyyy-MM-dd'),
+        startTime,
+        endTime,
+        timeRange,
+        whatsappNumber: data.whatsappNumber.replace(/\s/g, '').trim(),
+        userId: user.uid,
+        userName: user.displayName || 'Unknown User',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
 
       // Calculate total price
       const totalPrice = data.timeSlots.reduce((sum, slot) => {
@@ -196,7 +199,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
       }, 0);
 
       const message = encodeURIComponent(
-        `Hi! I'd like to request a booking for ${turf.name} on ${format(data.date, 'PPP')} for the following slots: ${data.timeSlots.join(', ')} for a total of ₹${totalPrice}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
+        `Hi! I'd like to request a booking for ${turf.name} on ${format(data.date, 'PPP')} for ${timeRange} (${data.timeSlots.length} hour${data.timeSlots.length > 1 ? 's' : ''}) for a total of ₹${totalPrice}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
       );
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
       window.open(whatsappUrl, '_blank');

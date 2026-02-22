@@ -67,11 +67,35 @@ export function PendingBookings() {
       // Get turf info for message
       const turf = turfs.find(t => t.id === booking.turfId);
       const bookingDate = new Date(booking.date.replace(/-/g, '/'));
-      const price = turf ? getPriceForSlot(turf, booking.timeSlot, bookingDate) : 0;
+      
+      // Calculate total price for the time range
+      let totalPrice = 0;
+      let timeDisplay = '';
+      
+      if (turf && booking.startTime && booking.endTime) {
+        // New format with time range
+        const startHour = parseInt(booking.startTime.split(':')[0]);
+        const endHour = parseInt(booking.endTime.split(':')[0]);
+        
+        for (let hour = startHour; hour < endHour; hour++) {
+          const slotStart = hour.toString().padStart(2, '0') + ':00';
+          const slotEnd = (hour + 1).toString().padStart(2, '0') + ':00';
+          const slot = `${slotStart} - ${slotEnd}`;
+          totalPrice += getPriceForSlot(turf, slot, bookingDate);
+        }
+        timeDisplay = booking.timeRange || `${booking.startTime} - ${booking.endTime}`;
+      } else if (turf && booking.timeSlot) {
+        // Old format with individual slot
+        totalPrice = getPriceForSlot(turf, booking.timeSlot, bookingDate);
+        timeDisplay = booking.timeSlot;
+      } else {
+        totalPrice = 0;
+        timeDisplay = 'Unknown time';
+      }
 
       // Create WhatsApp message
       const message = encodeURIComponent(
-        `Hi ${booking.userName}! Your booking for ${turf?.name} on ${format(bookingDate, 'PPP')} from ${booking.timeSlot} (₹${price}) has been confirmed. Thank you!`
+        `Hi ${booking.userName}! Your booking for ${turf?.name} on ${format(bookingDate, 'PPP')} from ${timeDisplay} (₹${totalPrice}) has been confirmed. Thank you!`
       );
       
       // Open WhatsApp with user's number
@@ -148,16 +172,33 @@ export function PendingBookings() {
                 pendingBookings.map((booking) => {
                   const turf = turfs.find(t => t.id === booking.turfId);
                   const bookingDate = new Date(booking.date.replace(/-/g, '/'));
-                  const price = turf ? getPriceForSlot(turf, booking.timeSlot, bookingDate) : 0;
+                  
+                  // Calculate total price for the time range
+                  let totalPrice = 0;
+                  if (turf && booking.startTime && booking.endTime) {
+                    const startHour = parseInt(booking.startTime.split(':')[0]);
+                    const endHour = parseInt(booking.endTime.split(':')[0]);
+                    
+                    for (let hour = startHour; hour < endHour; hour++) {
+                      const slotStart = hour.toString().padStart(2, '0') + ':00';
+                      const slotEnd = (hour + 1).toString().padStart(2, '0') + ':00';
+                      const slot = `${slotStart} - ${slotEnd}`;
+                      totalPrice += getPriceForSlot(turf, slot, bookingDate);
+                    }
+                  } else if (turf && booking.timeSlot) {
+                    // Fallback for old bookings with timeSlot
+                    totalPrice = getPriceForSlot(turf, booking.timeSlot, bookingDate);
+                  }
+                  
                   return (
                     <TableRow key={booking.id} className="bg-amber-50/50">
                       <TableCell className="font-medium">{turf?.name || 'Unknown'}</TableCell>
                       <TableCell>{format(bookingDate, 'PPP')}</TableCell>
-                      <TableCell>{booking.timeSlot}</TableCell>
+                      <TableCell>{booking.timeRange || booking.timeSlot}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1">
                           <IndianRupee className="h-4 w-4" />
-                          {price}
+                          {totalPrice}
                         </span>
                       </TableCell>
                       <TableCell>{booking.userName || '—'}</TableCell>
