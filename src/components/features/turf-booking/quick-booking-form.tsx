@@ -202,8 +202,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
         `Hi! I'd like to request a booking for ${turf.name} on ${format(data.date, 'PPP')} for ${timeRange} (${data.timeSlots.length} hour${data.timeSlots.length > 1 ? 's' : ''}) for a total of ₹${totalPrice}. My WhatsApp number is ${data.whatsappNumber}. Please confirm.`
       );
       const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`;
-      window.open(whatsappUrl, '_blank');
-
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       form.reset({ turfId: initialTurfId || '', date: undefined, timeSlots: [], whatsappNumber: user.phoneNumber || '' });
       toast({ title: 'Booking Requested', description: 'Proceed to WhatsApp to confirm with the admin.' });
       
