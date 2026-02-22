@@ -285,7 +285,7 @@ export function BookingList() {
                             name="turfId"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Turf</FormLabel>
+                                <FormLabel htmlFor="turfId">Turf</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger><SelectValue placeholder="Select a turf" /></SelectTrigger>
@@ -305,7 +305,7 @@ export function BookingList() {
                             name="date"
                             render={({ field }) => (
                             <FormItem className="flex flex-col">
-                                <FormLabel>Date</FormLabel>
+                                <FormLabel htmlFor="date">Date</FormLabel>
                                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -339,7 +339,7 @@ export function BookingList() {
                             name="timeSlots"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Time Slots (1 hour each)</FormLabel>
+                                <FormLabel htmlFor="timeSlots">Time Slots (1 hour each)</FormLabel>
                                 <div className="grid grid-cols-3 gap-2 pt-2">
                                   {selectedDate && selectedTurfId && timeSlots.map((slot) => {
                                     const isBooked = bookedSlots.includes(slot);
@@ -357,7 +357,28 @@ export function BookingList() {
                                             const newValue = isSelected 
                                               ? field.value.filter(s => s !== slot)
                                               : [...field.value, slot];
-                                            field.onChange(newValue);
+                                            
+                                            // Check if selection creates a continuous block
+                                            const sortedSlots = [...newValue].sort();
+                                            let isContinuous = true;
+                                            for (let i = 1; i < sortedSlots.length; i++) {
+                                              const currentIndex = timeSlots.indexOf(sortedSlots[i]);
+                                              const prevIndex = timeSlots.indexOf(sortedSlots[i - 1]);
+                                              if (currentIndex !== prevIndex + 1) {
+                                                isContinuous = false;
+                                                break;
+                                              }
+                                            }
+                                            
+                                            if (isContinuous) {
+                                              field.onChange(newValue);
+                                            } else {
+                                              toast({
+                                                variant: 'destructive',
+                                                title: 'Invalid Selection',
+                                                description: 'Please select continuous time slots only (e.g., 9:00 AM, 10:00 AM, 11:00 AM).'
+                                              });
+                                            }
                                           }
                                         }}
                                         className={cn(
@@ -413,7 +434,7 @@ export function BookingList() {
                             name="whatsappNumber"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>WhatsApp Number</FormLabel>
+                                <FormLabel htmlFor="whatsappNumber">WhatsApp Number</FormLabel>
                                 <FormControl>
                                     <Input placeholder="+91 98765 43210" {...field} />
                                 </FormControl>

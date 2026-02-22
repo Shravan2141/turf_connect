@@ -65,6 +65,25 @@ const quickBookingSchema = z.object({
   if (!data.date && data.timeSlots.length > 0) {
     return false;
   }
+  
+  // Check if selected slots are continuous
+  const sortedSlots = [...data.timeSlots].sort();
+  let isContinuous = true;
+  for (let i = 1; i < sortedSlots.length; i++) {
+    const currentIndex = timeSlots.indexOf(sortedSlots[i]);
+    const prevIndex = timeSlots.indexOf(sortedSlots[i - 1]);
+    if (currentIndex !== prevIndex + 1) {
+      isContinuous = false;
+      break;
+    }
+  }
+  
+  if (!isContinuous) {
+    return {
+      message: 'Please select continuous time slots only (e.g., 9:00 AM, 10:00 AM, 11:00 AM).',
+      path: ['timeSlots'],
+    };
+  }
   return true;
 }, {
   message: 'Please select a date before choosing time slots.',
@@ -240,7 +259,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
               name="turfId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Turf</FormLabel>
+                  <FormLabel htmlFor="turfId">Turf</FormLabel>
                   {initialTurfId ? (
                     // Display as locked/read-only when pre-selected from turf card
                     <div className="w-full p-3 rounded-md border border-gray-300 bg-gray-50 text-gray-800 font-medium">
@@ -272,7 +291,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel htmlFor="date">Date</FormLabel>
                   <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -324,7 +343,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
               name="timeSlots"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Time Slots (1 hour each)</FormLabel>
+                  <FormLabel htmlFor="timeSlots">Time Slots (1 hour each)</FormLabel>
                   <div className="grid grid-cols-3 gap-2 pt-2">
                     {selectedDate && selectedTurfId && timeSlots.map((slot) => {
                       const isBooked = bookedSlots.includes(slot);
@@ -342,7 +361,30 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
                               const newValue = isSelected 
                                 ? field.value.filter(s => s !== slot)
                                 : [...field.value, slot];
-                              field.onChange(newValue);
+                              
+                              // Check if selection creates a continuous block
+                              const sortedSlots = [...newValue].sort();
+                              let isContinuous = true;
+                              for (let i = 1; i < sortedSlots.length; i++) {
+                                const currentIndex = timeSlots.indexOf(sortedSlots[i]);
+                                const prevIndex = timeSlots.indexOf(sortedSlots[i - 1]);
+                                if (currentIndex !== prevIndex + 1) {
+                                  isContinuous = false;
+                                  break;
+                                }
+                              }
+                              
+                              if (isContinuous) {
+                                field.onChange(newValue);
+                              } else {
+                                // The schema validation will show the error message
+                                field.onChange(field.value); // Revert to previous value
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Invalid Selection',
+                                  description: 'Please select continuous time slots only (e.g., 9:00 AM, 10:00 AM, 11:00 AM).'
+                                });
+                              }
                             }
                           }}
                           className={cn(
@@ -350,6 +392,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
                             isBooked 
                               ? 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed opacity-60'
                               : isSelected
+                      
                               ? 'bg-primary text-primary-foreground border-primary font-semibold'
                               : 'bg-white border-gray-300 text-gray-700 hover:border-primary hover:bg-primary/5'
                           )}
@@ -399,7 +442,7 @@ export function QuickBookingForm({ selectedTurfId: initialTurfId, onBookingCompl
               name="whatsappNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>WhatsApp Number</FormLabel>
+                  <FormLabel htmlFor="whatsappNumber">WhatsApp Number</FormLabel>
                   <FormControl>
                     <Input placeholder="+91 98765 43210" {...field} />
                   </FormControl>

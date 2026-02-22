@@ -153,7 +153,7 @@ export function TurfManagement() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel htmlFor="name">Name</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Pavallion Sports Arena T4" {...field} />
                     </FormControl>
@@ -166,7 +166,7 @@ export function TurfManagement() {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel htmlFor="location">Location</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Mira Bhayandar" {...field} />
                     </FormControl>
@@ -179,7 +179,7 @@ export function TurfManagement() {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price</FormLabel>
+                    <FormLabel htmlFor="price">Base Price</FormLabel>
                     <FormControl>
                       <div className="relative flex items-center">
                         <IndianRupee className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
